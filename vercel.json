@@ -3,5 +3,10 @@
     "FEISHU_APP_ID": "@feishu_app_id",
     "FEISHU_APP_SECRET": "@feishu_app_secret",
     "FEISHU_TABLE_ID": "@feishu_table_id"
-  }
+  },
+  "framework": "nextjs",
+  "buildCommand": "next build",
+  "devCommand": "next dev",
+  "installCommand": "npm install",
+  "outputDirectory": ".next"
 } 
