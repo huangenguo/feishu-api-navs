@@ -66,9 +66,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     )
     
     // 获取视图名称作为分类顺序
-    const categoryOrder = viewsResponse.data.data.items.map(
-      (view: { view_name: string }) => view.view_name
-    )
+    const categoryOrder = viewsResponse.data.data.items
+      .map((view: { view_name: string }) => view.view_name)
+      .filter(Boolean)
     
     // 获取表格数据
     const response = await axios.get(
@@ -96,7 +96,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         title: item.fields.Title || '',
         url: item.fields.URL?.link || item.fields.URL?.text || '',
         description: item.fields.Description || '',
-        category: item.fields.Category?.[0] || '',
+        category: item.fields.Category || [],
         icon: item.fields.Icon || '',
         recommend: item.fields.Recommend || '',
         order: parseInt(item.fields.Order || '0', 10),

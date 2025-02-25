@@ -18,21 +18,30 @@ export default function Home() {
   const [categoryOrder, setCategoryOrder] = useState<string[]>([])
   const [error, setError] = useState<string>('')
   const [loading, setLoading] = useState(true)
+  const [loadStartTime, setLoadStartTime] = useState(0)
   const [searchTerm, setSearchTerm] = useState('')
   const [activeCategory, setActiveCategory] = useState<string>('')
   const [activeTag, setActiveTag] = useState<string>('')
 
   useEffect(() => {
     const fetchLinks = async () => {
+      setLoadStartTime(Date.now())
       try {
         const res = await axios.get('/api/links')
         setLinks(res.data.links)
+        // 直接使用API返回的categoryOrder
         setCategoryOrder(res.data.categoryOrder)
       } catch (err) {
         setError('Failed to fetch links')
         console.error(err)
       } finally {
-        setLoading(false)
+        // 确保加载动画至少显示 500ms，避免太快的闪烁
+        const loadTime = Date.now() - loadStartTime
+        if (loadTime < 500) {
+          setTimeout(() => setLoading(false), 500 - loadTime)
+        } else {
+          setLoading(false)
+        }
       }
     }
     
@@ -49,7 +58,7 @@ export default function Home() {
   const getAllTags = (category: string) => {
     return Array.from(new Set(
       links
-        .filter(link => !category || link.category === category)
+        .filter(link => !category || link.category.includes(category))
         .flatMap(link => link.tags)
     )).filter(Boolean)
   }
@@ -62,18 +71,22 @@ export default function Home() {
     const matchesSearch = 
       link.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       link.description.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesCategory = !activeCategory || link.category === activeCategory
+    const matchesCategory = !activeCategory || link.category.includes(activeCategory)
     const matchesTag = !activeTag || link.tags.includes(activeTag)
     return matchesSearch && matchesCategory && matchesTag
   })
 
-  // 按分类分组
+  // 修改分组逻辑
   const groupedLinks = filteredLinks.reduce((groups, link) => {
-    const category = link.category || '其他'
-    return {
-      ...groups,
-      [category]: [...(groups[category] || []), link]
-    }
+    // 对每个链接的所有分类都进行分组
+    link.category.forEach(category => {
+      const cat = category || '其他'
+      if (!groups[cat]) {
+        groups[cat] = []
+      }
+      groups[cat].push(link)
+    })
+    return groups
   }, {} as Record<string, Link[]>)
 
   return (

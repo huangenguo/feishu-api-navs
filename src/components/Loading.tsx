@@ -1,6 +1,20 @@
+import { useEffect, useState } from 'react'
 import { HashLoader } from 'react-spinners'
 
 export default function Loading() {
+  const [showLoader, setShowLoader] = useState(false)
+  
+  // 添加一个小延迟，避免闪烁
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowLoader(true)
+    }, 200) // 200ms 延迟，避免加载太快时的闪烁
+
+    return () => clearTimeout(timer)
+  }, [])
+
+  if (!showLoader) return null
+
   return (
     <div className="fixed inset-0 flex flex-col items-center justify-center bg-gradient-to-r from-blue-50 to-indigo-50">
       <HashLoader
