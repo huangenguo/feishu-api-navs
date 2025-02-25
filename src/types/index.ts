@@ -7,4 +7,5 @@ export interface Link {
   recommend?: string
   order: number
   tags: string[]
+  viewOrders: Record<string, number>
 } 

@@ -41,7 +41,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     const token = await getAccessToken()
     
-    // 先获取表格列表
+    // 1. 获取表格列表
     const tablesResponse = await axios.get(
       `https://open.feishu.cn/open-apis/bitable/v1/apps/${TABLE_ID}/tables`,
       {
@@ -54,7 +54,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     
     const firstTableId = tablesResponse.data.data.items[0].table_id
     
-    // 获取视图列表
+    // 2. 获取所有记录
+    const recordsResponse = await axios.get(
+      `https://open.feishu.cn/open-apis/bitable/v1/apps/${TABLE_ID}/tables/${firstTableId}/records`,
+      {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    )
+
+    // 3. 获取所有视图
     const viewsResponse = await axios.get(
       `https://open.feishu.cn/open-apis/bitable/v1/apps/${TABLE_ID}/tables/${firstTableId}/views`,
       {
@@ -65,50 +76,54 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     )
     
-    // 获取视图名称作为分类顺序
-    const categoryOrder = viewsResponse.data.data.items
-      .map((view: { view_name: string }) => view.view_name)
-      .filter(Boolean)
+    const views = viewsResponse.data.data.items
+    const categoryOrder = views.map((view: { view_name: string }) => view.view_name)
     
-    // 获取表格数据
-    const response = await axios.get(
-      `https://open.feishu.cn/open-apis/bitable/v1/apps/${TABLE_ID}/tables/${firstTableId}/records`,
-      {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      }
-    )
-
-    if (!response.data || !response.data.data) {
-      throw new Error('Invalid API response structure')
-    }
-
-    const items = response.data.data.items || []
-    const links = items
-      .filter((item: any) => 
-        item.fields.Title && 
-        item.fields.URL && 
-        item.fields.Description
+    // 4. 处理记录数据
+    const records = recordsResponse.data.data.items || []
+    
+    // 打印原始记录示例
+    console.log('Sample raw record:', JSON.stringify(records[0], null, 2))
+    
+    const links = records
+      .filter((record: any) => 
+        record.fields.Title && 
+        record.fields.URL && 
+        record.fields.Description
       )
-      .map((item: any) => ({
-        title: item.fields.Title || '',
-        url: item.fields.URL?.link || item.fields.URL?.text || '',
-        description: item.fields.Description || '',
-        category: item.fields.Category || [],
-        icon: item.fields.Icon || '',
-        recommend: item.fields.Recommend || '',
-        order: parseInt(item.fields.Order || '0', 10),
-        tags: item.fields.Tags || []
+      .map((record: any) => ({
+        title: record.fields.Title || '',
+        url: record.fields.URL?.link || record.fields.URL?.text || '',
+        description: record.fields.Description || '',
+        category: record.fields.Category || [],
+        icon: record.fields.Icon || '',
+        recommend: record.fields.Recommend || '',
+        order: record.fields.Order ? parseInt(record.fields.Order, 10) : Number.MAX_SAFE_INTEGER,
+        tags: record.fields.Tags || [],
+        viewOrders: record.fields.Category?.reduce((acc: Record<string, number>, cat: string) => {
+          acc[cat] = record.fields.Order ? parseInt(record.fields.Order, 10) : Number.MAX_SAFE_INTEGER
+          return acc
+        }, {}) || {}
       }))
       .sort((a: Link, b: Link) => a.order - b.order)
 
-    // 返回带有分类排序的数据
+    // 打印处理后的示例数据
+    console.log('Sample processed link:', JSON.stringify(links[0], null, 2))
+    console.log('Sample viewOrders:', JSON.stringify(links[0]?.viewOrders, null, 2))
+
+    // 返回处理后的数据
     res.status(200).json({
       links,
-      categoryOrder
+      categoryOrder,
+      // 添加调试信息
+      debug: {
+        sampleRawRecord: records[0],
+        sampleProcessedLink: links[0],
+        recordsCount: records.length,
+        linksCount: links.length
+      }
     })
+    
   } catch (error: any) {
     console.error('API Error:', error)
     res.status(500).json({ 
