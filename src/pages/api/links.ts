@@ -36,6 +36,14 @@ const getViews = async (token: string, appId: string, tableId: string) => {
   return response.data.data.items[0].view_id
 }
 
+interface TableRecord {
+  id: string;
+  fields: {
+    Category?: string | string[];
+    [key: string]: any;
+  };
+}
+
 // API路由处理函数
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
@@ -82,10 +90,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // 4. 处理记录数据
     const records = recordsResponse.data.data.items || []
     
-    // 打印原始记录示例
-    console.log('Sample raw record:', JSON.stringify(records[0], null, 2))
+    // 修改处理 Category 的逻辑
+    const processedRecords = records.map((record: TableRecord) => ({
+      ...record,
+      fields: {
+        ...record.fields,
+        Category: Array.isArray(record.fields.Category) 
+          ? record.fields.Category 
+          : [record.fields.Category]
+      }
+    }));
     
-    const links = records
+    // 打印原始记录示例
+    console.log('Sample raw record:', JSON.stringify(processedRecords[0], null, 2))
+    
+    const links = processedRecords
       .filter((record: any) => 
         record.fields.Title && 
         record.fields.URL && 
@@ -117,9 +136,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       categoryOrder,
       // 添加调试信息
       debug: {
-        sampleRawRecord: records[0],
+        sampleRawRecord: processedRecords[0],
         sampleProcessedLink: links[0],
-        recordsCount: records.length,
+        recordsCount: processedRecords.length,
         linksCount: links.length
       }
     })
