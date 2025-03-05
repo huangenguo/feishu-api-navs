@@ -114,4 +114,26 @@
 /* 添加图标背景主题类 */
 .theme-icon-bg {
   background-color: var(--icon-background);
+}
+
+/* 图标浮动动画 */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.animate-float-slow {
+  animation: float 6s ease-in-out infinite;
+}
+
+.animate-float-normal {
+  animation: float 5s ease-in-out infinite;
+}
+
+.animate-float-fast {
+  animation: float 4s ease-in-out infinite;
 } 
