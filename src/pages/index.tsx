@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import axios from 'axios'
 import { Link } from '@/types'
 import Loading from '@/components/Loading'
+import { ThemeSwitch } from '@/components/ThemeSwitch'
 
 // 添加渐变色数组
 const gradientColors = [
@@ -119,11 +120,11 @@ export default function Home() {
     : categoryOrder.filter(cat => groupedLinks[cat] && groupedLinks[cat].length > 0)
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen theme-bg">
       <div className="flex min-h-screen">
-        {/* 左侧边栏 - 修改为固定定位 */}
-        <div className="w-60 shrink-0 fixed top-0 left-0 h-screen p-6 bg-slate-50 flex flex-col">
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-3 flex flex-col gap-1 flex-1">
+        {/* 左侧边栏 */}
+        <div className="w-60 shrink-0 fixed top-0 left-0 h-screen p-6 theme-bg flex flex-col">
+          <div className="theme-bg-secondary rounded-xl shadow-sm border theme-border-color p-3 flex flex-col gap-1 flex-1">
             <button
               onClick={() => {
                 setActiveCategory('')
@@ -132,7 +133,7 @@ export default function Home() {
               className={`px-4 py-2.5 rounded-lg text-sm font-medium text-left
                 ${!activeCategory 
                   ? 'bg-blue-50 text-blue-600' 
-                  : 'text-slate-600 hover:bg-slate-50'}`}
+                  : 'theme-text-secondary theme-hover-bg'}`}
             >
               全部
             </button>
@@ -146,7 +147,7 @@ export default function Home() {
                 className={`px-4 py-2.5 rounded-lg text-sm font-medium text-left
                   ${activeCategory === category
                     ? 'bg-blue-50 text-blue-600'
-                    : 'text-slate-600 hover:bg-slate-50'}`}
+                    : 'theme-text-secondary theme-hover-bg'}`}
               >
                 {category}
               </button>
@@ -154,27 +155,29 @@ export default function Home() {
           </div>
         </div>
 
-        {/* 右侧内容区 - 只使用左边距 */}
+        {/* 右侧内容区 */}
         <div className="flex-1 p-6 ml-60">
           {/* 搜索区域 */}
           <div className="bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl shadow-lg p-8 mb-6 relative">
-            {/* 添加 GitHub 链接 */}
-            <a
-              href="https://github.com/Eagle-CN/Feishu_API_Navs"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="absolute top-4 right-4 text-white/80 hover:text-white 
-                transition-colors duration-200"
-              title="View on GitHub"
-            >
-              <svg
-                viewBox="0 0 24 24"
-                className="w-6 h-6"
-                fill="currentColor"
+            {/* 添加主题切换按钮 */}
+            <div className="absolute top-4 right-4 flex items-center gap-4">
+              <ThemeSwitch />
+              <a
+                href="https://github.com/Eagle-CN/Feishu_API_Navs"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-white/80 hover:text-white transition-colors duration-200"
+                title="View on GitHub"
               >
-                <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" />
-              </svg>
-            </a>
+                <svg
+                  viewBox="0 0 24 24"
+                  className="w-6 h-6"
+                  fill="currentColor"
+                >
+                  <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" />
+                </svg>
+              </a>
+            </div>
 
             <h1 className="text-2xl font-bold text-white text-center mb-6">
               一个小小的导航网站
@@ -211,10 +214,10 @@ export default function Home() {
             </div>
           </div>
 
-          {/* 分类标题和标签 - 只在具体分类下显示 */}
+          {/* 分类标题和标签 */}
           {activeCategory && (
             <div className="flex items-center gap-6 mb-6">
-              <h2 className="text-xl font-bold text-slate-800">
+              <h2 className="text-xl font-bold theme-text-primary">
                 {activeCategory}
               </h2>
               
@@ -225,7 +228,7 @@ export default function Home() {
                     transition-colors duration-200
                     ${!activeTag
                       ? 'bg-blue-100 text-blue-700'
-                      : 'text-slate-600 hover:bg-slate-100'}`}
+                      : 'theme-text-secondary theme-hover-bg'}`}
                 >
                   全部
                 </button>
@@ -237,7 +240,7 @@ export default function Home() {
                       transition-colors duration-200
                       ${activeTag === tag
                         ? 'bg-blue-100 text-blue-700'
-                        : 'text-slate-600 hover:bg-slate-100'}`}
+                        : 'theme-text-secondary theme-hover-bg'}`}
                   >
                     {tag}
                   </button>
@@ -251,7 +254,7 @@ export default function Home() {
             {orderedCategories.map(category => (
               <div key={category}>
                 {!activeCategory && (
-                  <h3 className="text-lg font-medium text-slate-700 mb-4">{category}</h3>
+                  <h3 className="text-lg font-medium theme-text-primary mb-4">{category}</h3>
                 )}
                 <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
                   {groupedLinks[category]?.map(link => (
@@ -260,8 +263,8 @@ export default function Home() {
                       href={link.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="group p-4 bg-white rounded-xl border border-slate-200
-                        hover:border-blue-500/20 hover:shadow-lg hover:shadow-blue-500/5
+                      className="group p-4 theme-bg-secondary rounded-xl border theme-border-color
+                        hover:border-blue-500/10
                         transform hover:-translate-y-1
                         transition-all duration-300
                         relative"
@@ -285,8 +288,8 @@ export default function Home() {
 
                       <div className="flex items-start gap-3">
                         <div className="w-12 h-12 shrink-0 rounded-lg flex items-center justify-center
-                          bg-slate-50 group-hover:bg-blue-50
-                          transition-all duration-300"
+                          theme-icon-bg
+                          transition-transform duration-300"
                         >
                           {link.icon ? (
                             <img
@@ -308,12 +311,12 @@ export default function Home() {
                           )}
                         </div>
                         <div className="flex-1 min-w-0 pr-7">
-                          <h3 className="font-medium text-slate-800 group-hover:text-blue-600
-                            truncate text-sm mb-1.5 leading-relaxed"
+                          <h3 className="font-medium theme-text-primary
+                            truncate text-[15px] mb-2 leading-relaxed"
                           >
                             {link.title}
                           </h3>
-                          <p className="text-xs text-slate-500 truncate group-hover:text-slate-600 leading-relaxed">
+                          <p className="text-[13px] theme-text-description truncate leading-relaxed">
                             {link.description}
                           </p>
                         </div>

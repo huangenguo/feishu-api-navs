@@ -20,4 +20,98 @@
 
 .scrollbar-none::-webkit-scrollbar {
   display: none;
+}
+
+/* 主题变量 */
+:root {
+  --background: #ffffff;
+  --background-secondary: #ffffff;
+  --icon-background: #f9fafb;
+  --text-primary: #1a1a1a;
+  --text-secondary: #666666;
+  --text-description: #595959;
+  --border-color: #e5e7eb;
+  --hover-bg: #f3f4f6;
+  --card-hover-bg: #454545;
+}
+
+.dark {
+  --background: #121212;
+  --background-secondary: #1a1a1a;
+  --icon-background: #454545;
+  --text-primary: #ffffff;
+  --text-secondary: #8b8b8b;
+  --text-description: #8b8b8b;
+  --border-color: #2e2e2e;
+  --hover-bg: #2a2a2a;
+  --card-hover-bg: #454545;
+}
+
+/* 主题类 */
+.theme-bg {
+  background-color: var(--background);
+}
+
+.theme-bg-secondary {
+  background-color: var(--background-secondary);
+}
+
+.theme-text-primary {
+  color: var(--text-primary);
+}
+
+.theme-text-secondary {
+  color: var(--text-secondary);
+}
+
+.theme-text-description {
+  color: var(--text-description);
+}
+
+.theme-border {
+  border: 1px solid var(--border-color);
+}
+
+/* 如果只想应用边框颜色 */
+.theme-border-color {
+  border-color: var(--border-color);
+}
+
+.theme-hover-bg {
+  @apply transition-colors duration-200;
+}
+
+.theme-hover-bg:hover {
+  background-color: var(--hover-bg);
+}
+
+/* 卡片悬浮效果 */
+.dark .theme-bg-secondary.group:hover {
+  background-color: var(--card-hover-bg);
+  transform: translateY(-2px);
+  transition: all 0.3s ease;
+}
+
+/* 搜索框样式 */
+.dark .search-input {
+  background-color: rgba(255, 255, 255, 0.05);
+  color: var(--text-primary);
+}
+
+.dark .search-input::placeholder {
+  color: var(--text-secondary);
+}
+
+/* 导航栏样式 */
+.dark .nav-item {
+  @apply text-gray-400 hover:text-white transition-colors;
+}
+
+.dark .nav-item.active {
+  @apply text-white bg-gray-800;
+}
+
+/* 添加图标背景主题类 */
+.theme-icon-bg {
+  background-color: var(--icon-background);
 } 
