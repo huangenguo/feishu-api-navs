@@ -66,7 +66,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     
     // 2. 获取所有记录
     const recordsResponse = await axios.get(
-      `https://open.feishu.cn/open-apis/bitable/v1/apps/${APP_TOKEN}/tables/${TABLE_ID}/records/batch_get`,
+      `https://open.feishu.cn/open-apis/bitable/v1/apps/${APP_TOKEN}/tables/${TABLE_ID}/records`,
       {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -74,7 +74,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
       }
     )
-
+    // 条件搜索（需POST）
+    // const recordsResponse = await axios.post(
+    //   `https://open.feishu.cn/open-apis/bitable/v1/apps/${APP_TOKEN}/tables/${TABLE_ID}/records/search`,
+    //   { filter: {} }, // 空条件表示查询所有记录
+    //   { headers: {...} }
+    // )
     // 3. 获取所有视图
     const viewsResponse = await axios.get(
       `https://open.feishu.cn/open-apis/bitable/v1/apps/${APP_TOKEN}/tables/${TABLE_ID}/views/`,
@@ -85,6 +90,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
       }
     )
+    if (viewsResponse.data.code !== 0) {throw new Error(`获取视图失败: ${viewsResponse.data.msg}`)}
     // https://open.feishu.cn/open-apis/bitable/v1/apps/:app_token/tables/:table_id/views/:view_id
     const views = viewsResponse.data.data.items
     const categoryOrder = views.map((view: { view_name: string }) => view.view_name)
@@ -99,8 +105,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       fields: {
         ...record.fields,
         Category: Array.isArray(record.fields.Category) 
-          ? record.fields.Category 
-          : [record.fields.Category]
+          ? record.fields.Category.filter(Boolean) // 过滤空字符串、null、undefined
+          : record.fields.Category ? [record.fields.Category].filter(Boolean) : []
       }
     }));
     
