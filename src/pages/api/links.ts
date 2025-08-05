@@ -64,23 +64,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     
     // const firstTableId = tablesResponse.data.data.items[0].table_id
     
-    // 2. 获取所有记录
-    const recordsResponse = await axios.get(
-      `https://open.feishu.cn/open-apis/bitable/v1/apps/${APP_TOKEN}/tables/${TABLE_ID}/records`,
-      {
+    // 2. 列出记录：获取所有记录 https://open.feishu.cn/document/server-docs/docs/bitable-v1/app-table-record/list
+    // const recordsResponse = await axios.get(
+    //   `https://open.feishu.cn/open-apis/bitable/v1/apps/${APP_TOKEN}/tables/${TABLE_ID}/records`,
+    //   {
+    //     headers: {
+    //       'Authorization': `Bearer ${token}`,
+    //       'Content-Type': 'application/json'
+    //     }
+    //   }
+    // )
+    // 查询记录：条件搜索（需POST）https://open.feishu.cn/document/docs/bitable-v1/app-table-record/search
+    const recordsResponse = await axios.post(
+      `https://open.feishu.cn/open-apis/bitable/v1/apps/${APP_TOKEN}/tables/${TABLE_ID}/records/search`,
+      { filter: {} }, // 空条件表示查询所有记录
+      { 
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       }
     )
-    // 条件搜索（需POST）
-    // const recordsResponse = await axios.post(
-    //   `https://open.feishu.cn/open-apis/bitable/v1/apps/${APP_TOKEN}/tables/${TABLE_ID}/records/search`,
-    //   { filter: {} }, // 空条件表示查询所有记录
-    //   { headers: {...} }
-    // )
-    // 3. 获取所有视图
+    // 3. 列出视图:获取多维表格数据表中的所有视图
     const viewsResponse = await axios.get(
       `https://open.feishu.cn/open-apis/bitable/v1/apps/${APP_TOKEN}/tables/${TABLE_ID}/views/`,
       {
