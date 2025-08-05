@@ -77,7 +77,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // 查询记录：条件搜索（需POST）https://open.feishu.cn/document/docs/bitable-v1/app-table-record/search
     const recordsResponse = await axios.post(
       `https://open.feishu.cn/open-apis/bitable/v1/apps/${APP_TOKEN}/tables/${TABLE_ID}/records/search`,
-      { filter: {} }, // 空条件表示查询所有记录
       { 
         headers: {
           'Authorization': `Bearer ${token}`,
