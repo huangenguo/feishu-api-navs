@@ -1,14 +1,50 @@
 // src/pages/api/links.ts
 import { NextApiRequest, NextApiResponse } from 'next'
 import axios from 'axios'
-import { Link } from '@/types'
 
-// 飞书API配置 - 使用明确区分的环境变量
+// 飞书API配置
 const FEISHU_APP_ID = process.env.FEISHU_APP_ID
 const FEISHU_APP_SECRET = process.env.FEISHU_APP_SECRET
 const APP_TOKEN = process.env.FEISHU_APP_TOKEN // bitable文档的唯一标识
 const TABLE_ID = process.env.FEISHU_TABLE_ID   // 数据表的唯一标识id
 const VIEW_ID = process.env.FEISHU_VIEW_ID     // 视图的唯一标识id
+
+// 多维表格字段类型定义
+interface TableRecord {
+  id: string;
+  fields: {
+    title: string;                  // 链接标题（必填）
+    url: string;                    // 链接地址（必填）
+    description: string;            // 链接描述（必填）
+    category: string[];             // 分类（数组）
+    icon?: string;                  // 图标（可选）
+    recommend?: string;             // 推荐标识（可选）
+    order: number;                  // 排序序号
+    tags: string[];                 // 标签（数组）
+    [key: string]: any;             // 允许其他扩展字段
+  };
+}
+
+// 视图信息类型
+interface ViewInfo {
+  view_id: string;
+  view_name: string;
+  view_type: string;
+  [key: string]: any;
+}
+
+// 最终返回的链接类型（与多维表格字段对应）
+interface Link {
+  title: string;
+  url: string;
+  description: string;
+  category: string[];
+  icon?: string;
+  recommend?: string;
+  order: number;
+  tags: string[];
+  viewOrders: Record<string, number>;
+}
 
 // 获取访问令牌
 async function getAccessToken(): Promise<string> {
@@ -35,7 +71,7 @@ async function getViewRecords(
   appToken: string, 
   tableId: string, 
   viewId: string
-) {
+): Promise<TableRecord[]> {
   try {
     const response = await axios.get(
       `https://open.feishu.cn/open-apis/bitable/v1/apps/${appToken}/tables/${tableId}/views/${viewId}/records`,
@@ -45,7 +81,7 @@ async function getViewRecords(
           'Content-Type': 'application/json'
         },
         params: {
-          page_size: 1000, // 最大分页大小
+          page_size: 1000,
           page_token: ''
         }
       }
@@ -55,11 +91,10 @@ async function getViewRecords(
       throw new Error(`获取视图记录失败: ${response.data.msg} (错误码: ${response.data.code})`)
     }
     
-    // 处理分页数据
-    let allRecords = response.data.data.items
+    let allRecords: TableRecord[] = response.data.data.items
     let nextPageToken = response.data.data.page_token
     
-    // 如果有更多数据，继续获取
+    // 处理分页
     while (nextPageToken) {
       const nextResponse = await axios.get(
         `https://open.feishu.cn/open-apis/bitable/v1/apps/${appToken}/tables/${tableId}/views/${viewId}/records`,
@@ -92,7 +127,7 @@ async function getViewInfo(
   appToken: string,
   tableId: string,
   viewId: string
-) {
+): Promise<ViewInfo> {
   try {
     const response = await axios.get(
       `https://open.feishu.cn/open-apis/bitable/v1/apps/${appToken}/tables/${tableId}/views/${viewId}`,
@@ -118,7 +153,7 @@ async function getViewInfo(
 // API路由处理函数
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
-    // 验证环境变量 - 检查所有必要的配置
+    // 验证环境变量
     if (!FEISHU_APP_ID || !FEISHU_APP_SECRET) {
       return res.status(500).json({ 
         error: '配置错误', 
@@ -155,50 +190,41 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.log(`使用视图: ${viewInfo.view_name} (ID: ${VIEW_ID})`)
     
     // 3. 获取指定视图中的记录
-    const records = await getViewRecords(token, APP_TOKEN, TABLE_ID, VIEW_ID)
+    const records: TableRecord[] = await getViewRecords(token, APP_TOKEN, TABLE_ID, VIEW_ID)
     console.log(`从视图中获取到 ${records.length} 条记录`)
     
-    // 4. 处理记录数据
-    const processedRecords = records.map((record: TableRecord) => ({
-      ...record,
-      fields: {
-        ...record.fields,
-        // 确保Category是数组类型
-        Category: Array.isArray(record.fields.Category) 
-          ? record.fields.Category 
-          : record.fields.Category ? [record.fields.Category] : []
-      }
-    }));
-    
-    // 5. 提取所有分类并保持唯一
+    // 4. 提取所有分类并去重
     const allCategories = Array.from(
-      new Set(processedRecords.flatMap(record => 
-        Array.isArray(record.fields.Category) ? record.fields.Category : [record.fields.Category]
-      ).filter(Boolean))
-    )
+      new Set(records.flatMap(record => record.fields.category))
+    ).filter(Boolean) // 过滤空值
     
-    // 6. 转换为Link类型并过滤有效数据
-    const links: Link[] = processedRecords
+    // 5. 转换为Link类型并过滤有效数据
+    const links: Link[] = records
+      // 严格过滤必填字段
       .filter((record) => 
-        record.fields.Title && 
-        record.fields.URL && 
-        record.fields.Description
+        typeof record.fields.title === 'string' && 
+        record.fields.title.trim() !== '' &&
+        typeof record.fields.url === 'string' && 
+        record.fields.url.trim() !== '' &&
+        typeof record.fields.description === 'string' && 
+        record.fields.description.trim() !== ''
       )
       .map((record) => ({
-        title: record.fields.Title || '',
-        url: record.fields.URL?.link || record.fields.URL?.text || '',
-        description: record.fields.Description || '',
-        category: record.fields.Category || [],
-        icon: record.fields.Icon || '',
-        recommend: record.fields.Recommend || '',
-        order: record.fields.Order ? parseInt(record.fields.Order.toString(), 10) : Number.MAX_SAFE_INTEGER,
-        tags: Array.isArray(record.fields.Tags) ? record.fields.Tags : [],
-        viewOrders: record.fields.Category?.reduce((acc: Record<string, number>, cat: string) => {
+        title: record.fields.title.trim(),
+        url: record.fields.url.trim(),
+        description: record.fields.description.trim(),
+        category: Array.isArray(record.fields.category) ? record.fields.category : [record.fields.category],
+        icon: record.fields.icon?.trim() || undefined, // 确保空值为undefined
+        recommend: record.fields.recommend?.trim() || undefined,
+        order: typeof record.fields.order === 'number' ? record.fields.order : 0,
+        tags: Array.isArray(record.fields.tags) ? record.fields.tags : [],
+        viewOrders: record.fields.category.reduce((acc: Record<string, number>, cat: string) => {
           const catIndex = allCategories.indexOf(cat)
           acc[cat] = catIndex !== -1 ? catIndex : Number.MAX_SAFE_INTEGER
           return acc
-        }, {}) || {}
+        }, {})
       }))
+      // 按order字段排序
       .sort((a, b) => a.order - b.order)
 
     // 返回处理后的数据
@@ -207,7 +233,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       viewName: viewInfo.view_name,
       categories: allCategories,
       stats: {
-        totalRecords: processedRecords.length,
+        totalRecords: records.length,
         validLinks: links.length,
         totalCategories: allCategories.length
       }
