@@ -33,7 +33,7 @@ async function getAccessToken() {
 // )
 // 查询记录：条件搜索（需POST）https://open.feishu.cn/document/docs/bitable-v1/app-table-record/search
 // 分页获取所有记录的函数
-async function getAllRecords() {
+async function getAllRecords(token: string) {
   const allRecords: any[] = []
   let pageToken = '' // 分页标记，初始为空表示第一页
   const pageSize = 100 // 每页最大条数（飞书API支持1-500）
@@ -92,7 +92,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const token = await getAccessToken()
     
     // 调用分页函数获取所有记录（替换原有的单页获取逻辑）
-    const records = await getAllRecords()
+    const records = await getAllRecords(token)
     
     // 3. 列出视图:获取多维表格数据表中的所有视图
     const viewsResponse = await axios.get(
