@@ -76,8 +76,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // )
     // 查询记录：条件搜索（需POST）https://open.feishu.cn/document/docs/bitable-v1/app-table-record/search
     const recordsResponse = await axios.post(
-      `https://open.feishu.cn/open-apis/bitable/v1/apps/${APP_TOKEN}/tables/${TABLE_ID}/records/search?page_size=500`,
-      { filter: {} },
+      `https://open.feishu.cn/open-apis/bitable/v1/apps/${APP_TOKEN}/tables/${TABLE_ID}/records/search`,
+      { filter: {and: []},
+      page_size:20
+      },
       { 
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -87,7 +89,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     )
     // 3. 列出视图:获取多维表格数据表中的所有视图
     const viewsResponse = await axios.get(
-      `https://open.feishu.cn/open-apis/bitable/v1/apps/${APP_TOKEN}/tables/${TABLE_ID}/views/`,
+      `https://open.feishu.cn/open-apis/bitable/v1/apps/${APP_TOKEN}/tables/${TABLE_ID}/views`,
       {
         headers: {
           'Authorization': `Bearer ${token}`,
