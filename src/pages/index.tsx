@@ -174,7 +174,7 @@ export default function Home() {
                 </div>
                 <div className="p-1">  {/* 添加内边距增加点击区域 */}
                   <a
-                    href="https://github.com/Eagle-CN/Feishu_API_Navs"
+                    href="https://github.com/huangenguo/feishu-api-navs"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-white/80 hover:text-white transition-colors duration-200 block"
@@ -193,7 +193,7 @@ export default function Home() {
             </div>
 
             <h1 className="text-2xl font-bold text-white text-center mb-6 relative z-10">
-              一个小小的导航网站
+              飞书导航站
             </h1>
             
             <div className="max-w-2xl mx-auto relative z-10">

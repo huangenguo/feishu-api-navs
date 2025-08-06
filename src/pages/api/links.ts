@@ -7,7 +7,6 @@ const FEISHU_APP_ID = process.env.FEISHU_APP_ID
 const FEISHU_APP_SECRET = process.env.FEISHU_APP_SECRET
 const APP_TOKEN = process.env.FEISHU_APP_TOKEN // bitable文档的唯一标识
 const TABLE_ID = process.env.FEISHU_TABLE_ID   // 数据表的唯一标识id
-// const VIEW_ID = process.env.FEISHU_VIEW_ID     // 视图的唯一标识id
 
 // 获取访问令牌
 async function getAccessToken() {
@@ -22,21 +21,62 @@ async function getAccessToken() {
     throw error
   }
 }
-
-// 获取视图列表
-// const getViews = async (token: string, appId: string, tableId: string) => {
-//   const response = await axios.get(
-//     `https://open.feishu.cn/open-apis/bitable/v1/apps/${appId}/tables/${tableId}/views`,
-//     {
-//       headers: {
-//         'Authorization': `Bearer ${token}`,
-//         'Content-Type': 'application/json'
-//       }
+// 列出记录：获取所有记录 旧API  https://open.feishu.cn/document/server-docs/docs/bitable-v1/app-table-record/list
+// const recordsResponse = await axios.get(
+//   `https://open.feishu.cn/open-apis/bitable/v1/apps/${APP_TOKEN}/tables/${TABLE_ID}/records`,
+//   {
+//     headers: {
+//       'Authorization': `Bearer ${token}`,
+//       'Content-Type': 'application/json'
 //     }
-//   )
-//   console.log('Views response:', JSON.stringify(response.data, null, 2))
-//   return response.data.data.items[0].view_id
-// }
+//   }
+// )
+// 查询记录：条件搜索（需POST）https://open.feishu.cn/document/docs/bitable-v1/app-table-record/search
+// 分页获取所有记录的函数
+async function getAllRecords(token: string, appToken: string, tableId: string) {
+  const allRecords: any[] = []
+  let pageToken = '' // 分页标记，初始为空表示第一页
+  const pageSize = 100 // 每页最大条数（飞书API支持1-500）
+
+  try {
+    // 循环获取所有分页数据
+    do {
+      const response = await axios.post(
+        `https://open.feishu.cn/open-apis/bitable/v1/apps/${appToken}/tables/${tableId}/records/search`,
+        { 
+          page_size: pageSize,
+          page_token: pageToken // 传递上一页的分页标记
+        },
+        { 
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      )
+
+      if (response.data.code !== 0) {
+        throw new Error(`分页获取失败: ${response.data.msg} (code: ${response.data.code})`)
+      }
+
+      // 累加当前页数据
+      allRecords.push(...response.data.data.items)
+      
+      // 更新分页标记，为空时表示没有更多数据
+      pageToken = response.data.data.page_token
+
+      // 打印当前进度
+      console.log(`已获取 ${allRecords.length} 条记录，下一页标记: ${pageToken || '无'}`)
+
+    } while (pageToken) // 当有下一页标记时继续循环
+
+    console.log(`所有记录获取完成，共 ${allRecords.length} 条`)
+    return allRecords
+  } catch (error) {
+    console.error('分页获取记录失败:', error)
+    throw error
+  }
+}
 
 interface TableRecord {
   id: string;
@@ -51,42 +91,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     const token = await getAccessToken()
     
-    // 1. 获取表格列表
-    // const tablesResponse = await axios.get(
-    //   `https://open.feishu.cn/open-apis/bitable/v1/apps/${TABLE_ID}/tables`,
-    //   {
-    //     headers: {
-    //       'Authorization': `Bearer ${token}`,
-    //       'Content-Type': 'application/json'
-    //     }
-    //   }
-    // )
+    // 调用分页函数获取所有记录（替换原有的单页获取逻辑）
+    const records = await getAllRecords(token, APP_TOKEN, TABLE_ID)
     
-    // const firstTableId = tablesResponse.data.data.items[0].table_id
-    
-    // 2. 列出记录：获取所有记录 https://open.feishu.cn/document/server-docs/docs/bitable-v1/app-table-record/list
-    // const recordsResponse = await axios.get(
-    //   `https://open.feishu.cn/open-apis/bitable/v1/apps/${APP_TOKEN}/tables/${TABLE_ID}/records`,
-    //   {
-    //     headers: {
-    //       'Authorization': `Bearer ${token}`,
-    //       'Content-Type': 'application/json'
-    //     }
-    //   }
-    // )
-    // 查询记录：条件搜索（需POST）https://open.feishu.cn/document/docs/bitable-v1/app-table-record/search
-    const recordsResponse = await axios.post(
-      `https://open.feishu.cn/open-apis/bitable/v1/apps/${APP_TOKEN}/tables/${TABLE_ID}/records/search`,
-      { 
-      page_size:20
-      },
-      { 
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      }
-    )
     // 3. 列出视图:获取多维表格数据表中的所有视图
     const viewsResponse = await axios.get(
       `https://open.feishu.cn/open-apis/bitable/v1/apps/${APP_TOKEN}/tables/${TABLE_ID}/views`,
@@ -97,27 +104,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
       }
     )
-    if (viewsResponse.data.code !== 0) {throw new Error(`获取视图失败: ${viewsResponse.data.msg}`)}
-    // https://open.feishu.cn/open-apis/bitable/v1/apps/:app_token/tables/:table_id/views/:view_id
+    if (viewsResponse.data.code !== 0) {
+      throw new Error(`获取视图失败: ${viewsResponse.data.msg}`)
+    }
+    
     const views = viewsResponse.data.data.items
     const categoryOrder = views.map((view: { view_name: string }) => view.view_name)
     
-    // 4. 处理记录数据
-    if (recordsResponse.data.code !== 0) {throw new Error(`获取记录失败: ${recordsResponse.data.msg}`)}
-    const records = recordsResponse.data.data.items || []
-    
-    // 修改处理 Category 的逻辑
+    // 处理记录数据
     const processedRecords = records.map((record: TableRecord) => ({
       ...record,
       fields: {
         ...record.fields,
         Category: Array.isArray(record.fields.Category) 
-          ? record.fields.Category.filter(Boolean) // 过滤空字符串、null、undefined
+          ? record.fields.Category.filter(Boolean) // 过滤空值
           : record.fields.Category ? [record.fields.Category].filter(Boolean) : []
       }
     }));
     
-    // 打印原始记录示例
     console.log('Sample raw record:', JSON.stringify(processedRecords[0], null, 2))
     
     const links = processedRecords
@@ -142,19 +146,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }))
       .sort((a: Link, b: Link) => a.order - b.order)
 
-    // 打印处理后的示例数据
     console.log('Sample processed link:', JSON.stringify(links[0], null, 2))
-    console.log('Sample viewOrders:', JSON.stringify(links[0]?.viewOrders, null, 2))
+    console.log('共处理生成', links.length, '条有效链接')
 
-    // 返回处理后的数据
     res.status(200).json({
       links,
       categoryOrder,
-      // 添加调试信息
       debug: {
         sampleRawRecord: processedRecords[0],
         sampleProcessedLink: links[0],
-        recordsCount: processedRecords.length,
+        recordsCount: processedRecords.length, // 总记录数（所有分页）
         linksCount: links.length
       }
     })
