@@ -86,6 +86,40 @@ interface TableRecord {
   };
 }
 
+// 从飞书多维表格字段值中提取文本内容
+function extractText(value: any): string {
+  if (Array.isArray(value) && value.length > 0) {
+    if (typeof value[0] === 'object' && value[0].text !== undefined) {
+      return value[0].text
+    }
+    return String(value[0])
+  }
+  if (typeof value === 'object' && value.text !== undefined) {
+    return value.text
+  }
+  return typeof value === 'string' ? value : ''
+}
+
+// 从飞书多维表格字段值中提取链接
+function extractUrl(value: any): string {
+  if (typeof value === 'object' && value.link !== undefined) {
+    return value.link
+  }
+  if (typeof value === 'object' && value.text !== undefined) {
+    return value.text
+  }
+  if (Array.isArray(value) && value.length > 0) {
+    if (typeof value[0] === 'object' && value[0].link !== undefined) {
+      return value[0].link
+    }
+    if (typeof value[0] === 'object' && value[0].text !== undefined) {
+      return value[0].text
+    }
+    return String(value[0])
+  }
+  return typeof value === 'string' ? value : ''
+}
+
 // API路由处理函数
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
@@ -109,54 +143,116 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
     
     const views = viewsResponse.data.data.items
-    const categoryOrder = views.map((view: { view_name: string }) => view.view_name)
+    const viewNames = views.map((view: { view_name: string }) => view.view_name)
     
-    // 处理记录数据
-    const processedRecords = records.map((record: TableRecord) => ({
-      ...record,
-      fields: {
-        ...record.fields,
-        Category: Array.isArray(record.fields.Category) 
-          ? record.fields.Category.filter(Boolean) // 过滤空值
-          : record.fields.Category ? [record.fields.Category].filter(Boolean) : []
+    console.log('=== 调试信息: 原始记录 ===')
+    console.log('记录总数:', records.length)
+    console.log('视图名称:', viewNames)
+    if (records.length > 0) {
+      console.log('第一条记录的所有字段:', Object.keys(records[0].fields))
+      console.log('第一条记录完整数据:', JSON.stringify(records[0], null, 2))
+    }
+    
+    // 处理记录数据 - 支持飞书多维表格的数组格式字段
+    const processedRecords = records.map((record: TableRecord) => {
+      const fields = record.fields
+      
+      // 提取字段值，支持飞书多维表格的数组格式
+      const title = extractText(fields.Title || fields['Title'] || fields['标题'] || fields['title'])
+      const urlField = fields.URL || fields['URL'] || fields['链接'] || fields['url'] || {}
+      const description = extractText(fields.Description || fields['Description'] || fields['描述'] || fields['description'])
+      const category = fields.Category || fields['Category'] || fields['分类'] || fields['category'] || []
+      const icon = extractText(fields.Icon || fields['Icon'] || fields['图标'] || fields['icon'])
+      const recommend = extractText(fields.Recommend || fields['Recommend'] || fields['推荐'] || fields['recommend'])
+      const order = fields.Order || fields['Order'] || fields['排序'] || fields['order'] || Number.MAX_SAFE_INTEGER
+      const tags = fields.Tags || fields['Tags'] || fields['标签'] || fields['tags'] || []
+      
+      return {
+        ...record,
+        fields: {
+          Title: title,
+          URL: urlField,
+          Description: description,
+          Category: Array.isArray(category) 
+            ? category.filter(Boolean)
+            : category ? [category].filter(Boolean) : [],
+          Icon: icon,
+          Recommend: recommend,
+          Order: order,
+          Tags: Array.isArray(tags) ? tags.map(t => extractText(t)) : (tags ? [extractText(tags)] : [])
+        }
       }
-    }));
+    });
     
-    console.log('Sample raw record:', JSON.stringify(processedRecords[0], null, 2))
+    console.log('=== 调试信息: 处理后的记录 ===')
+    if (processedRecords.length > 0) {
+      console.log('第一条处理后记录:', JSON.stringify(processedRecords[0], null, 2))
+    }
     
     const links = processedRecords
-      .filter((record: any) => 
-        typeof record.fields.Title === 'string' && record.fields.Title.trim() !== '' &&
-        record.fields.URL && (record.fields.URL.link || record.fields.URL.text) &&
-        typeof record.fields.Description === 'string' && record.fields.Description.trim() !== ''
-      )
-      .map((record: any) => ({
-        title: record.fields.Title || '',
-        url: record.fields.URL?.link || record.fields.URL?.text || '',
-        description: record.fields.Description || '',
-        category: record.fields.Category || [],
-        icon: record.fields.Icon || '',
-        recommend: record.fields.Recommend || '',
-        order: record.fields.Order ? parseInt(record.fields.Order, 10) : Number.MAX_SAFE_INTEGER,
-        tags: record.fields.Tags || [],
-        viewOrders: record.fields.Category?.reduce((acc: Record<string, number>, cat: string) => {
-          acc[cat] = record.fields.Order ? parseInt(record.fields.Order, 10) : Number.MAX_SAFE_INTEGER
-          return acc
-        }, {}) || {}
-      }))
+      .filter((record: any) => {
+        const hasTitle = typeof record.fields.Title === 'string' && record.fields.Title.trim() !== ''
+        const urlValue = extractUrl(record.fields.URL)
+        const hasUrl = urlValue && urlValue.trim() !== ''
+        const hasDescription = typeof record.fields.Description === 'string' && record.fields.Description.trim() !== ''
+        
+        if (!hasTitle || !hasUrl || !hasDescription) {
+          console.log('记录被过滤:', {
+            title: record.fields.Title,
+            url: urlValue,
+            description: record.fields.Description,
+            hasTitle,
+            hasUrl,
+            hasDescription
+          })
+        }
+        
+        return hasTitle && hasUrl && hasDescription
+      })
+      .map((record: any) => {
+        const url = extractUrl(record.fields.URL)
+        
+        return ({
+          title: record.fields.Title || '',
+          url: url,
+          description: record.fields.Description || '',
+          category: record.fields.Category || [],
+          icon: record.fields.Icon || '',
+          recommend: record.fields.Recommend || '',
+          order: record.fields.Order ? parseInt(String(record.fields.Order), 10) : Number.MAX_SAFE_INTEGER,
+          tags: record.fields.Tags || [],
+          viewOrders: record.fields.Category?.reduce((acc: Record<string, number>, cat: string) => {
+            acc[cat] = record.fields.Order ? parseInt(String(record.fields.Order), 10) : Number.MAX_SAFE_INTEGER
+            return acc
+          }, {}) || {}
+        })
+      })
       .sort((a: Link, b: Link) => a.order - b.order)
 
-    console.log('Sample processed link:', JSON.stringify(links[0], null, 2))
-    console.log('共处理生成', links.length, '条有效链接')
+    console.log('=== 调试信息: 最终链接 ===')
+    console.log('有效链接数:', links.length)
+    if (links.length > 0) {
+      console.log('第一条链接:', JSON.stringify(links[0], null, 2))
+    }
+    
+    const allCategories = [...new Set(links.flatMap(link => link.category))].filter(Boolean)
+    console.log('=== 调试信息: 所有分类 ===')
+    console.log('记录中的分类:', allCategories)
+    console.log('视图名称:', viewNames)
+    
+    const categoryOrder = allCategories.length > 0 ? allCategories : viewNames
 
     res.status(200).json({
       links,
       categoryOrder,
       debug: {
-        sampleRawRecord: processedRecords[0],
+        sampleRawRecord: records[0],
         sampleProcessedLink: links[0],
-        recordsCount: processedRecords.length, // 总记录数（所有分页）
-        linksCount: links.length
+        recordsCount: processedRecords.length,
+        linksCount: links.length,
+        rawFields: records.length > 0 ? Object.keys(records[0].fields) : [],
+        allCategories,
+        viewNames
       }
     })
     

@@ -57,6 +57,7 @@ npm install
 ```bash
 FEISHU_APP_ID=your_app_id
 FEISHU_APP_SECRET=your_app_secret
+FEISHU_APP_TOKEN=your_app_token
 FEISHU_TABLE_ID=your_table_id
 ```
 
@@ -78,6 +79,7 @@ npm run dev
    - 配置环境变量：
      * `FEISHU_APP_ID`
      * `FEISHU_APP_SECRET`
+     * `FEISHU_APP_TOKEN`
      * `FEISHU_TABLE_ID`
    - 点击 "Deploy"
 
@@ -110,7 +112,8 @@ nav-site/
 |--------|------|------|
 | FEISHU_APP_ID | 飞书应用 ID | cli_xxxx |
 | FEISHU_APP_SECRET | 飞书应用密钥 | xxxx |
-| FEISHU_TABLE_ID | 飞书多维表格 ID | tblxxxx |
+| FEISHU_APP_TOKEN | 飞书多维表格 App Token | 一个由数字和字母组成的26位字符串 |
+| FEISHU_TABLE_ID | 飞书多维表格数据表 ID | tblxxxx |
 
 ## 开发说明
 
@@ -124,6 +127,52 @@ nav-site/
 3. 添加新功能：
    - 在 `src/pages/api/` 添加新的 API 路由
    - 在 `src/components/` 添加新组件
+
+## API 说明
+
+本项目通过飞书开放 API 获取多维表格数据，主要涉及以下 API 端点：
+
+### 认证接口
+
+| 接口 | 方法 | 说明 |
+|------|------|------|
+| `/open-apis/auth/v3/tenant_access_token/internal` | POST | 获取 tenant_access_token |
+
+### 多维表格接口
+
+| 接口 | 方法 | 说明 |
+|------|------|------|
+| `/open-apis/bitable/v1/apps/{app_token}/tables/{table_id}/records/search` | POST | 搜索记录（支持分页） |
+| `/open-apis/bitable/v1/apps/{app_token}/tables/{table_id}/views` | GET | 获取视图列表 |
+
+### 字段格式说明
+
+飞书多维表格 API 返回的字段值可能为以下格式：
+
+```
+// 文本类型字段
+"Title": [{"text": "内容", "type": "text"}]
+
+// 链接类型字段
+"URL": [{"link": "https://example.com", "type": "url"}]
+
+// 多选类型字段
+"Category": ["分类1", "分类2"]
+```
+
+## 飞书官方资源
+
+- [飞书开放平台](https://open.feishu.cn/) - 飞书开放平台首页
+- [多维表格 API 文档](https://open.feishu.cn/document/server-docs/docs/bitable-v1/app-table-record/list) - 多维表格记录 API
+- [飞书开发者控制台](https://open.feishu.cn/app) - 创建和管理飞书应用
+- [多维表格权限说明](https://open.feishu.cn/document/server-docs/docs/bitable-v1/permission) - 权限配置指南
+
+## 其他资源
+
+- [Next.js 官方文档](https://nextjs.org/docs) - Next.js 框架文档
+- [Vercel 部署文档](https://vercel.com/docs) - Vercel 平台部署指南
+- [Tailwind CSS 文档](https://tailwindcss.com/docs) - Tailwind CSS 样式框架
+- [TypeScript 官方文档](https://www.typescriptlang.org/docs/) - TypeScript 类型系统
 
 ## License
 
