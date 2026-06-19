@@ -65,12 +65,7 @@ async function getAllRecords(token: string) {
       // 更新分页标记，为空时表示没有更多数据
       pageToken = response.data.data.page_token
 
-      // 打印当前进度
-      console.log(`已获取 ${allRecords.length} 条记录，下一页标记: ${pageToken || '无'}`)
-
     } while (pageToken) // 当有下一页标记时继续循环
-
-    console.log(`所有记录获取完成，共 ${allRecords.length} 条`)
     return allRecords
   } catch (error) {
     console.error('分页获取记录失败:', error)
@@ -145,14 +140,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const views = viewsResponse.data.data.items
     const viewNames = views.map((view: { view_name: string }) => view.view_name)
     
-    console.log('=== 调试信息: 原始记录 ===')
-    console.log('记录总数:', records.length)
-    console.log('视图名称:', viewNames)
-    if (records.length > 0) {
-      console.log('第一条记录的所有字段:', Object.keys(records[0].fields))
-      console.log('第一条记录完整数据:', JSON.stringify(records[0], null, 2))
-    }
-    
     // 处理记录数据 - 支持飞书多维表格的数组格式字段
     const processedRecords = records.map((record: TableRecord) => {
       const fields = record.fields
@@ -184,28 +171,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     });
     
-    console.log('=== 调试信息: 处理后的记录 ===')
-    if (processedRecords.length > 0) {
-      console.log('第一条处理后记录:', JSON.stringify(processedRecords[0], null, 2))
-    }
-    
     const links = processedRecords
       .filter((record: any) => {
         const hasTitle = typeof record.fields.Title === 'string' && record.fields.Title.trim() !== ''
         const urlValue = extractUrl(record.fields.URL)
         const hasUrl = urlValue && urlValue.trim() !== ''
         const hasDescription = typeof record.fields.Description === 'string' && record.fields.Description.trim() !== ''
-        
-        if (!hasTitle || !hasUrl || !hasDescription) {
-          console.log('记录被过滤:', {
-            title: record.fields.Title,
-            url: urlValue,
-            description: record.fields.Description,
-            hasTitle,
-            hasUrl,
-            hasDescription
-          })
-        }
         
         return hasTitle && hasUrl && hasDescription
       })
@@ -229,31 +200,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })
       .sort((a: Link, b: Link) => a.order - b.order)
 
-    console.log('=== 调试信息: 最终链接 ===')
-    console.log('有效链接数:', links.length)
-    if (links.length > 0) {
-      console.log('第一条链接:', JSON.stringify(links[0], null, 2))
-    }
-    
-    const allCategories = [...new Set(links.flatMap(link => link.category))].filter(Boolean)
-    console.log('=== 调试信息: 所有分类 ===')
-    console.log('记录中的分类:', allCategories)
-    console.log('视图名称:', viewNames)
-    
+    const allCategories = Array.from(new Set(links.flatMap(link => link.category))).filter(Boolean)
     const categoryOrder = allCategories.length > 0 ? allCategories : viewNames
 
     res.status(200).json({
       links,
-      categoryOrder,
-      debug: {
-        sampleRawRecord: records[0],
-        sampleProcessedLink: links[0],
-        recordsCount: processedRecords.length,
-        linksCount: links.length,
-        rawFields: records.length > 0 ? Object.keys(records[0].fields) : [],
-        allCategories,
-        viewNames
-      }
+      categoryOrder
     })
     
   } catch (error: any) {

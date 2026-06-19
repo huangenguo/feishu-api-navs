@@ -30,7 +30,6 @@ export default function Home() {
       setLoadStartTime(Date.now())
       try {
         const res = await axios.get('/api/links')
-        console.log('API Response Debug:', res.data.debug)
         setLinks(res.data.links)
         setCategoryOrder(res.data.categoryOrder)
       } catch (err) {
