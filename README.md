@@ -23,14 +23,18 @@
 
 ### 1. 飞书配置
 
-1. 创建飞书多维表格，包含以下字段：
-   - Title (文本)
-   - URL (链接)
-   - Description (文本)
-   - Category (单选)
-   - Icon (文本，可选)
-   - Recommend (文本，可选)
-   - Order (数字，可选)
+1. 创建飞书多维表格，包含以下字段（支持中文或英文字段名）：
+
+| 字段名 | 字段类型 | 是否必填 | 说明 |
+|--------|----------|----------|------|
+| 标题/Title | 文本 | 必填 | 链接标题（如"百度搜索"） |
+| 链接/URL | 链接 | 必填 | 链接地址 |
+| 描述/Description | 文本 | 必填 | 链接描述 |
+| 分类/Category | 单选 | 必填 | 链接所属分类（如"工具"、"搜索"） |
+| 图标/Icon | 文本 | 可选 | 链接图标（如"🔍"或图标名称） |
+| 推荐/Recommend | 文本 | 可选 | 推荐标识（如"推荐"、"热门"） |
+| 排序/Order | 数字 | 可选 | 排序序号（数字越小越靠前） |
+| 标签/Tags | 标签 | 可选 | 标签列表（如"实用"、"常用"） |
 
 2. 在[飞书开发者平台](https://open.feishu.cn/app)创建应用：
    - 创建企业自建应用
@@ -145,19 +149,23 @@ nav-site/
 | `/open-apis/bitable/v1/apps/{app_token}/tables/{table_id}/records/search` | POST | 搜索记录（支持分页） |
 | `/open-apis/bitable/v1/apps/{app_token}/tables/{table_id}/views` | GET | 获取视图列表 |
 
+### 站点API端点
+
+https://example.com/api/links 查看返回的数据
+
 ### 字段格式说明
 
-飞书多维表格 API 返回的字段值可能为以下格式：
+飞书多维表格 API 返回的字段值可能为以下格式（支持中文或英文字段名）：
 
 ```
 // 文本类型字段
-"Title": [{"text": "内容", "type": "text"}]
+"标题": [{"text": "内容", "type": "text"}]  // 或 "Title"
 
 // 链接类型字段
-"URL": [{"link": "https://example.com", "type": "url"}]
+"链接": [{"link": "https://example.com", "type": "url"}]  // 或 "URL"
 
 // 多选类型字段
-"Category": ["分类1", "分类2"]
+"分类": ["分类1", "分类2"]  // 或 "Category"
 ```
 
 ## 飞书官方资源

@@ -322,12 +322,19 @@ export default function Home() {
                           )}
                         </div>
                         <div className="flex-1 min-w-0 pr-7">
-                          <h3 className="font-medium theme-text-primary
-                            truncate text-[15px] mb-2 leading-relaxed"
+                          <h3 
+                            className="font-medium theme-text-primary
+                              text-[15px] mb-2 leading-relaxed
+                              line-clamp-2"
+                            title={link.title}
                           >
                             {link.title}
                           </h3>
-                          <p className="text-[13px] theme-text-description truncate leading-relaxed">
+                          <p 
+                            className="text-[13px] theme-text-description leading-relaxed
+                              line-clamp-2"
+                            title={link.description}
+                          >
                             {link.description}
                           </p>
                         </div>
