@@ -4,6 +4,8 @@ import { Link } from '@/types'
 import Loading from '@/components/Loading'
 import { ThemeSwitch } from '@/components/ThemeSwitch'
 import { IconBackground } from '@/components/IconBackground'
+import { ClickStats } from '@/components/ClickStats'
+import { useClickStats } from '@/hooks/useClickStats'
 
 // 添加渐变色数组
 const gradientColors = [
@@ -24,6 +26,11 @@ export default function Home() {
   const [searchTerm, setSearchTerm] = useState('')
   const [activeCategory, setActiveCategory] = useState<string>('')
   const [activeTag, setActiveTag] = useState<string>('')
+  const { recordClick } = useClickStats()
+
+  const handleLinkClick = (url: string, title: string) => {
+    recordClick(url, title)
+  }
 
   useEffect(() => {
     const fetchLinks = async () => {
@@ -153,6 +160,10 @@ export default function Home() {
               </button>
             ))}
           </div>
+          
+          <div className="mt-6">
+            <ClickStats />
+          </div>
         </div>
 
         {/* 右侧内容区 */}
@@ -279,6 +290,7 @@ export default function Home() {
                         transform hover:-translate-y-1
                         transition-all duration-300
                         relative"
+                      onClick={() => handleLinkClick(link.url, link.title)}
                     >
                       {link.recommend && (
                         <span className="absolute top-3 right-3 flex-shrink-0 px-1.5 py-0.5 text-[10px] font-medium
