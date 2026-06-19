@@ -18,6 +18,12 @@ function ClearConfirmModal({ show, onClose, onConfirm }: ModalProps) {
       document.body.appendChild(div)
     }
     containerRef.current = div
+
+    return () => {
+      if (div && div.parentNode && !div.firstChild) {
+        div.parentNode.removeChild(div)
+      }
+    }
   }, [])
 
   useEffect(() => {
