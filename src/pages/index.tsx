@@ -77,7 +77,11 @@ export default function Home() {
   // 修改过滤逻辑
   const filteredLinks = links
     .filter(link => {
-      const matchesSearch = 
+      // 状态过滤：只显示状态为空或"启用"的链接
+      const isStatusValid = !link.status || link.status === '启用'
+      if (!isStatusValid) return false
+
+      const matchesSearch =
         link.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
         link.description.toLowerCase().includes(searchTerm.toLowerCase())
       const matchesCategory = !activeCategory || link.category.includes(activeCategory)
@@ -131,7 +135,7 @@ export default function Home() {
       <div className="flex min-h-screen">
         {/* 左侧边栏 */}
         <div className="w-60 shrink-0 fixed top-0 left-0 h-screen p-6 theme-bg flex flex-col">
-          <div className="theme-bg-secondary rounded-xl shadow-sm border theme-border-color p-3 flex flex-col gap-1 flex-1">
+          <div className="theme-bg-secondary rounded-xl shadow-sm border theme-border-color p-3 flex flex-col gap-1 flex-1 overflow-y-auto max-h-[calc(100vh-280px)]">
             <button
               onClick={() => {
                 setActiveCategory('')
@@ -203,7 +207,7 @@ export default function Home() {
             </div>
 
             <h1 className="text-2xl font-bold text-white text-center mb-6 relative z-10">
-              飞书导航站
+              创客恩果的飞书导航站
             </h1>
             
             <div className="max-w-2xl mx-auto relative z-10">

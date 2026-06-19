@@ -1,5 +1,69 @@
-﻿import { useState } from 'react'
+﻿import { useState, useEffect, useRef, createElement } from 'react'
 import { useClickStats, ClickRecord, RecentClick } from '@/hooks/useClickStats'
+
+interface ModalProps {
+  show: boolean
+  onClose: () => void
+  onConfirm: () => void
+}
+
+function ClearConfirmModal({ show, onClose, onConfirm }: ModalProps) {
+  const containerRef = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    let div = document.getElementById('modal-root') as HTMLDivElement
+    if (!div) {
+      div = document.createElement('div')
+      div.id = 'modal-root'
+      document.body.appendChild(div)
+    }
+    containerRef.current = div
+  }, [])
+
+  useEffect(() => {
+    if (show) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+    return () => {
+      document.body.style.overflow = ''
+    }
+  }, [show])
+
+  if (!show || !containerRef.current) return null
+
+  const modalContent = (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100]">
+      <div className="theme-bg-secondary rounded-xl shadow-xl p-6 max-w-sm w-full mx-4 border theme-border-color">
+        <div className="text-center">
+          <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-red-100 flex items-center justify-center">
+            <svg className="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <h3 className="text-lg font-medium theme-text-primary mb-2">确认清空？</h3>
+          <p className="text-sm theme-text-description mb-6">清空后所有点击记录将被删除，此操作不可撤销。</p>
+          <div className="flex gap-3">
+            <button onClick={onClose} className="flex-1 px-4 py-2 rounded-lg theme-text-secondary theme-hover-bg text-sm font-medium">
+              取消
+            </button>
+            <button onClick={onConfirm} className="flex-1 px-4 py-2 rounded-lg bg-red-500 text-white text-sm font-medium hover:bg-red-600 transition-colors">
+              确认清空
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+
+  if (typeof document !== 'undefined' && containerRef.current) {
+    const ReactDOM = require('react-dom')
+    return ReactDOM.createPortal(modalContent, containerRef.current)
+  }
+
+  return modalContent
+}
 
 type TabType = 'hot' | 'recent'
 
@@ -171,29 +235,11 @@ export function ClickStats() {
         )}
       </div>
 
-      {showClearConfirm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="theme-bg-secondary rounded-xl shadow-xl p-6 max-w-sm w-full mx-4 border theme-border-color">
-            <div className="text-center">
-              <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-red-100 flex items-center justify-center">
-                <svg className="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <h3 className="text-lg font-medium theme-text-primary mb-2">确认清空？</h3>
-              <p className="text-sm theme-text-description mb-6">清空后所有点击记录将被删除，此操作不可撤销。</p>
-              <div className="flex gap-3">
-                <button onClick={() => setShowClearConfirm(false)} className="flex-1 px-4 py-2 rounded-lg theme-text-secondary theme-hover-bg text-sm font-medium">
-                  取消
-                </button>
-                <button onClick={handleClear} className="flex-1 px-4 py-2 rounded-lg bg-red-500 text-white text-sm font-medium hover:bg-red-600 transition-colors">
-                  确认清空
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <ClearConfirmModal 
+        show={showClearConfirm} 
+        onClose={() => setShowClearConfirm(false)} 
+        onConfirm={handleClear} 
+      />
     </div>
   )
 }

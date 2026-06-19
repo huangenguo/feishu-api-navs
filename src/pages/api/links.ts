@@ -153,20 +153,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const recommend = extractText(fields.Recommend || fields['Recommend'] || fields['推荐'] || fields['recommend'])
       const order = fields.Order || fields['Order'] || fields['排序'] || fields['order'] || Number.MAX_SAFE_INTEGER
       const tags = fields.Tags || fields['Tags'] || fields['标签'] || fields['tags'] || []
-      
+      const status = extractText(fields.Status || fields['Status'] || fields['状态'] || fields['status'])
+
       return {
         ...record,
         fields: {
           Title: title,
           URL: urlField,
           Description: description,
-          Category: Array.isArray(category) 
+          Category: Array.isArray(category)
             ? category.filter(Boolean)
             : category ? [category].filter(Boolean) : [],
           Icon: icon,
           Recommend: recommend,
           Order: order,
-          Tags: Array.isArray(tags) ? tags.map(t => extractText(t)) : (tags ? [extractText(tags)] : [])
+          Tags: Array.isArray(tags) ? tags.map(t => extractText(t)) : (tags ? [extractText(tags)] : []),
+          Status: status
         }
       }
     });
@@ -192,6 +194,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           recommend: record.fields.Recommend || '',
           order: record.fields.Order ? parseInt(String(record.fields.Order), 10) : Number.MAX_SAFE_INTEGER,
           tags: record.fields.Tags || [],
+          status: record.fields.Status || '',
           viewOrders: record.fields.Category?.reduce((acc: Record<string, number>, cat: string) => {
             acc[cat] = record.fields.Order ? parseInt(String(record.fields.Order), 10) : Number.MAX_SAFE_INTEGER
             return acc

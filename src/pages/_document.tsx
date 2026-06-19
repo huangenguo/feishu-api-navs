@@ -10,7 +10,7 @@ export default function Document() {
         <meta name="keywords" content="导航,工具,资源,开发工具,设计资源" />
         
         {/* Open Graph 标签 */}
-        <meta property="og:title" content="iTools - 简洁优雅的导航网站" />
+        <meta property="og:title" content="创客恩果的飞书导航站" />
         <meta property="og:description" content="一个简洁优雅的导航网站，收集了各种实用的工具和资源。" />
         <meta property="og:type" content="website" />
         
