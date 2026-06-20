@@ -5,7 +5,8 @@ import Loading from '@/components/Loading'
 import { ThemeSwitch } from '@/components/ThemeSwitch'
 import { IconBackground } from '@/components/IconBackground'
 import { ClickStats } from '@/components/ClickStats'
-import { useClickStats } from '@/hooks/useClickStats'
+import { ScrollNav } from '@/components/ScrollNav'
+import { ClickStatsProvider, useClickStats } from '@/context/ClickStatsContext'
 
 // 添加渐变色数组
 const gradientColors = [
@@ -187,11 +188,12 @@ export default function Home() {
     : categoryOrder.filter(cat => groupedLinks[cat] && groupedLinks[cat].length > 0)
 
   return (
-    <div className="min-h-screen theme-bg">
-      <div className="flex min-h-screen">
+    <ClickStatsProvider>
+      <div className="min-h-screen theme-bg">
+        <div className="flex min-h-screen">
         {/* 左侧边栏 */}
         <div className="w-60 shrink-0 fixed top-0 left-0 h-screen p-6 theme-bg flex flex-col">
-          <div className="theme-bg-secondary rounded-xl shadow-sm border theme-border-color p-3 flex flex-col gap-1 flex-1 overflow-y-auto max-h-[calc(100vh-280px)]">
+          <div className="theme-bg-secondary rounded-xl shadow-sm border theme-border-color p-3 flex flex-col gap-1 flex-1 overflow-y-auto">
             <button
               onClick={() => {
                 setActiveCategory('')
@@ -220,11 +222,10 @@ export default function Home() {
               </button>
             ))}
           </div>
-          
-          <div className="mt-6">
-            <ClickStats />
-          </div>
         </div>
+
+        {/* 悬浮统计按钮 */}
+        <ClickStats />
 
         {/* 右侧内容区 */}
         <div className="flex-1 p-6 ml-60">
@@ -538,6 +539,9 @@ export default function Home() {
           </div>
         </div>
       </div>
-    </div>
+
+      {/* 悬浮导航按钮 */}
+      <ScrollNav />
+    </ClickStatsProvider>
   )
 } 

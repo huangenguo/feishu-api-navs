@@ -1,4 +1,4 @@
-﻿﻿import { useState, useEffect, useCallback } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react'
 
 export interface ClickRecord {
   url: string
@@ -13,14 +13,26 @@ export interface RecentClick {
   clickTime: number
 }
 
+interface ClickStatsContextType {
+  clickStats: Record<string, ClickRecord>
+  recentClicks: RecentClick[]
+  recordClick: (url: string, title: string) => void
+  getHotClicks: (limit?: number) => ClickRecord[]
+  getRecentClicks: () => RecentClick[]
+  clearStats: () => void
+}
+
+const ClickStatsContext = createContext<ClickStatsContextType | undefined>(undefined)
+
 const CLICK_STATS_KEY = 'click_stats'
 const RECENT_CLICKS_KEY = 'recent_clicks'
 const MAX_RECENT_CLICKS = 10
 
-export function useClickStats() {
+export function ClickStatsProvider({ children }: { children: ReactNode }) {
   const [clickStats, setClickStats] = useState<Record<string, ClickRecord>>({})
   const [recentClicks, setRecentClicks] = useState<RecentClick[]>([])
 
+  // 初始化加载 localStorage 数据
   useEffect(() => {
     try {
       const storedStats = localStorage.getItem(CLICK_STATS_KEY)
@@ -37,6 +49,7 @@ export function useClickStats() {
     }
   }, [])
 
+  // 同步到 localStorage
   useEffect(() => {
     try {
       localStorage.setItem(CLICK_STATS_KEY, JSON.stringify(clickStats))
@@ -84,12 +97,24 @@ export function useClickStats() {
     setRecentClicks([])
   }, [])
 
-  return {
-    clickStats,
-    recentClicks,
-    recordClick,
-    getHotClicks,
-    getRecentClicks,
-    clearStats
+  return (
+    <ClickStatsContext.Provider value={{
+      clickStats,
+      recentClicks,
+      recordClick,
+      getHotClicks,
+      getRecentClicks,
+      clearStats
+    }}>
+      {children}
+    </ClickStatsContext.Provider>
+  )
+}
+
+export function useClickStats() {
+  const context = useContext(ClickStatsContext)
+  if (context === undefined) {
+    throw new Error('useClickStats must be used within a ClickStatsProvider')
   }
+  return context
 }

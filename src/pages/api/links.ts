@@ -118,6 +118,13 @@ function extractUrl(value: any): string {
 // API路由处理函数
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
+    if (!FEISHU_APP_ID || !FEISHU_APP_SECRET || !APP_TOKEN || !TABLE_ID) {
+      return res.status(500).json({
+        error: 'Missing configuration',
+        message: '请配置飞书API相关环境变量'
+      })
+    }
+
     const token = await getAccessToken()
     
     // 调用分页函数获取所有记录（替换原有的单页获取逻辑）
