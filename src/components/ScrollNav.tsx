@@ -1,24 +1,24 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 
 export function ScrollNav() {
   const [isNearTop, setIsNearTop] = useState(true)
   const [isNearBottom, setIsNearBottom] = useState(false)
 
+  const handleScroll = useCallback(() => {
+    const scrollTop = window.scrollY
+    const scrollHeight = document.documentElement.scrollHeight
+    const clientHeight = window.innerHeight
+    const threshold = 100
+
+    setIsNearTop(scrollTop < threshold)
+    setIsNearBottom(scrollTop + clientHeight >= scrollHeight - threshold)
+  }, [])
+
   useEffect(() => {
-    const handleScroll = () => {
-      const scrollTop = window.scrollY
-      const scrollHeight = document.documentElement.scrollHeight
-      const clientHeight = window.innerHeight
-      const threshold = 100
-
-      setIsNearTop(scrollTop < threshold)
-      setIsNearBottom(scrollTop + clientHeight >= scrollHeight - threshold)
-    }
-
     handleScroll()
     window.addEventListener('scroll', handleScroll, { passive: true })
     return () => window.removeEventListener('scroll', handleScroll)
-  }, [])
+  }, [handleScroll])
 
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' })
