@@ -117,6 +117,15 @@ export default function Home() {
     )).filter(Boolean)
   }
 
+  // 获取全局所有标签（用于搜索框下方的标签筛选）
+  const getGlobalTags = () => {
+    return Array.from(new Set(
+      links
+        .filter(link => !link.status || link.status === '启用')
+        .flatMap(link => link.tags)
+    )).filter(Boolean)
+  }
+
   if (loading) return <Loading />
   if (error) return <div>Error: {error}</div>
 
@@ -305,9 +314,9 @@ export default function Home() {
                       </button>
                     </div>
                     <div className="max-h-64 overflow-y-auto">
-                      {searchHistory.map((term, index) => (
+                      {searchHistory.map((term) => (
                         <div
-                          key={index}
+                          key={term}
                           className="flex items-center justify-between px-4 py-2 hover:bg-slate-50 cursor-pointer group"
                           onClick={() => {
                             setSearchTerm(term)
@@ -334,6 +343,23 @@ export default function Home() {
                   </div>
                 )}
               </div>
+            </div>
+
+            {/* 全局标签筛选 */}
+            <div className="max-w-2xl mx-auto mt-4 flex flex-wrap gap-2">
+              {getGlobalTags().map(tag => (
+                <button
+                  key={tag}
+                  onClick={() => setActiveTag(activeTag === tag ? '' : tag)}
+                  className={`px-3 py-1.5 rounded-full text-sm font-medium
+                    transition-all duration-200
+                    ${activeTag === tag
+                      ? 'bg-white text-blue-600 shadow-md'
+                      : 'bg-white/30 text-white/80 hover:bg-white/40'}`}
+                >
+                  {tag}
+                </button>
+              ))}
             </div>
           </div>
 
@@ -471,6 +497,20 @@ export default function Home() {
                           >
                             {link.description}
                           </p>
+                          {/* 标签显示 */}
+                          {link.tags && link.tags.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5 mt-2">
+                              {link.tags.map((tag) => (
+                                <span
+                                  key={tag}
+                                  className="px-2 py-0.5 text-[11px] rounded-md
+                                    bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400"
+                                >
+                                  {tag}
+                                </span>
+                              ))}
+                            </div>
+                          )}
                         </div>
                         
                         <svg 

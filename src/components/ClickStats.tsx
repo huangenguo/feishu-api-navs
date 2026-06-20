@@ -1,4 +1,4 @@
-﻿﻿import { useState, useEffect, useRef, createElement } from 'react'
+import { useState, useEffect, useRef, createElement } from 'react'
 import { useClickStats, ClickRecord, RecentClick } from '@/hooks/useClickStats'
 
 interface ModalProps {
@@ -74,10 +74,11 @@ function ClearConfirmModal({ show, onClose, onConfirm }: ModalProps) {
 type TabType = 'hot' | 'recent'
 
 export function ClickStats() {
-  const { getHotClicks, getRecentClicks, clearStats } = useClickStats()
+  const { getHotClicks, getRecentClicks, clearStats, clickStats, recentClicks: recentClicksData } = useClickStats()
   const [activeTab, setActiveTab] = useState<TabType>('hot')
   const [showClearConfirm, setShowClearConfirm] = useState(false)
 
+  // 直接调用获取最新数据，通过引用 clickStats 和 recentClicksData 触发重新渲染
   const hotClicks = getHotClicks(5)
   const recentClicks = getRecentClicks()
 
