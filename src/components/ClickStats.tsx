@@ -54,13 +54,14 @@ function ClearConfirmModal({ show, onClose, onConfirm }: ModalProps) {
 type TabType = 'hot' | 'recent'
 
 export function ClickStats() {
-  const { getHotClicks, getRecentClicks, clearStats } = useClickStats()
+  const { getHotClicks, getRecentClicks, clearStats, clickStats, recentClicks: recentClicksData } = useClickStats()
   const [activeTab, setActiveTab] = useState<TabType>('hot')
   const [showClearConfirm, setShowClearConfirm] = useState(false)
   const [showPanel, setShowPanel] = useState(false)
   const panelRef = useRef<HTMLDivElement>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
 
+  // Context 数据变化会自动触发组件重新渲染，无需额外 useEffect
   const hotClicks = getHotClicks(5)
   const recentClicks = getRecentClicks()
 

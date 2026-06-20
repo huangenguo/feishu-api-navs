@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import axios from 'axios'
 import { Link } from '@/types'
 import Loading from '@/components/Loading'
@@ -7,6 +7,7 @@ import { IconBackground } from '@/components/IconBackground'
 import { ClickStats } from '@/components/ClickStats'
 import { ScrollNav } from '@/components/ScrollNav'
 import { ClickStatsProvider, useClickStats } from '@/context/ClickStatsContext'
+import DrawerSidebar, { DrawerToggle, NavItem } from '@/components/DrawerSidebar'
 
 const gradientColors = [
   'from-pink-400 to-purple-400',
@@ -16,6 +17,9 @@ const gradientColors = [
   'from-purple-400 to-indigo-400',
   'from-red-400 to-pink-400',
 ]
+
+// 热门标签阈值配置
+const HOT_THRESHOLD = 3
 
 function HomeContent() {
   const [links, setLinks] = useState<Link[]>([])
@@ -27,7 +31,37 @@ function HomeContent() {
   const [activeTag, setActiveTag] = useState<string>('')
   const [searchHistory, setSearchHistory] = useState<string[]>([])
   const [showHistory, setShowHistory] = useState(false)
-  const { recordClick } = useClickStats()
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false)
+  const searchInputRef = useRef<HTMLInputElement>(null)
+  const { recordClick, clickStats } = useClickStats()
+
+  const navItems: NavItem[] = [
+    {
+      id: 'all',
+      label: '全部',
+    },
+    ...categoryOrder.map(category => ({
+      id: category,
+      label: category,
+    })),
+  ]
+
+  const handleDrawerOpen = () => {
+    setIsDrawerOpen(true)
+  }
+
+  const handleDrawerClose = () => {
+    setIsDrawerOpen(false)
+  }
+
+  const handleNavItemClick = (item: NavItem) => {
+    if (item.id === 'all') {
+      setActiveCategory('')
+    } else {
+      setActiveCategory(item.id)
+    }
+    setActiveTag('')
+  }
 
   const handleLinkClick = (url: string, title: string) => {
     recordClick(url, title)
@@ -95,6 +129,33 @@ function HomeContent() {
     setSearchHistory([])
     localStorage.removeItem('searchHistory')
   }
+
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    if (e.key === '/' && !e.ctrlKey && !e.metaKey && !e.shiftKey) {
+      const target = e.target as HTMLElement
+      if (target.tagName !== 'INPUT' && target.tagName !== 'TEXTAREA') {
+        e.preventDefault()
+        searchInputRef.current?.focus()
+      }
+    }
+    
+    if (e.key === 'Escape') {
+      setSearchTerm(prev => {
+        if (prev) {
+          setShowHistory(false)
+          return ''
+        }
+        return prev
+      })
+      setShowHistory(false)
+      searchInputRef.current?.blur()
+    }
+  }, [])
+
+  useEffect(() => {
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [handleKeyDown])
 
   const getRandomGradient = (text: string) => {
     const index = text.charCodeAt(0) % gradientColors.length
@@ -172,8 +233,19 @@ function HomeContent() {
 
   return (
     <div className="min-h-screen theme-bg">
+      <DrawerSidebar
+        isOpen={isDrawerOpen}
+        onClose={handleDrawerClose}
+        onOpen={handleDrawerOpen}
+        placement="left"
+        width="w-80"
+        navItems={navItems}
+        activeItemId={activeCategory || 'all'}
+        onItemClick={handleNavItemClick}
+      />
+
       <div className="flex min-h-screen">
-        <div className="w-60 shrink-0 fixed top-0 left-0 h-screen p-6 theme-bg flex flex-col">
+        <aside className="w-60 shrink-0 fixed top-0 left-0 h-screen p-6 theme-bg flex flex-col hidden lg:block">
           <div className="theme-bg-secondary rounded-xl shadow-sm border theme-border-color p-3 flex flex-col gap-1 flex-1 overflow-y-auto">
             <button
               onClick={() => {
@@ -203,10 +275,10 @@ function HomeContent() {
               </button>
             ))}
           </div>
-        </div>
+        </aside>
 
-        <div className="flex-1 p-6 ml-60">
-          <div className="rounded-xl shadow-lg p-6 mb-6 relative overflow-hidden
+        <div className="flex-1 p-6 lg:ml-60">
+          <div className="rounded-xl shadow-lg p-6 mb-6 relative
             bg-gradient-to-r from-blue-500 to-indigo-600
             dark:from-zinc-900 dark:to-black"
           >
@@ -214,6 +286,7 @@ function HomeContent() {
             
             <div className="absolute top-4 right-4 z-20">
               <div className="flex items-center gap-4">
+                <DrawerToggle onClick={handleDrawerOpen} />
                 <div className="p-1">
                   <ThemeSwitch />
                 </div>
@@ -244,8 +317,9 @@ function HomeContent() {
             <div className="max-w-2xl mx-auto relative z-10">
               <div className="relative group">
                 <input
+                  ref={searchInputRef}
                   type="text"
-                  placeholder="搜索资源标题、描述或链接..."
+                  placeholder="搜索资源标题、描述或链接... (按 / 聚焦)"
                   className="w-full px-6 py-4 pl-14 rounded-full
                     bg-white/90 backdrop-blur-sm
                     focus:outline-none focus:ring-2 focus:ring-white/20
@@ -410,21 +484,40 @@ function HomeContent() {
                         relative"
                       onClick={() => handleLinkClick(link.url, link.title)}
                     >
-                      {link.recommend && (
-                        <span className="absolute top-3 right-3 flex-shrink-0 px-1.5 py-0.5 text-[10px] font-medium
-                          bg-gradient-to-r from-blue-500 to-purple-500
-                          text-white rounded-full shadow-sm
-                          flex items-center gap-0.5"
-                        >
-                          <svg 
-                            className="w-2.5 h-2.5" 
-                            fill="currentColor" 
-                            viewBox="0 0 20 20"
-                          >
-                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                          </svg>
-                          {link.recommend}
-                        </span>
+                      {/* 标签容器 - 使用 flex 布局排列多个标签 */}
+                      {(link.recommend || (clickStats[link.url]?.count || 0) >= HOT_THRESHOLD) && (
+                        <div className="absolute top-3 right-3 flex gap-1.5">
+                          {/* 热门标签 */}
+                          {(clickStats[link.url]?.count || 0) >= HOT_THRESHOLD && (
+                            <span className="flex-shrink-0 px-1.5 py-0.5 text-[10px] font-medium
+                              bg-gradient-to-r from-orange-500 to-red-500
+                              text-white rounded-full shadow-sm
+                              flex items-center gap-0.5"
+                            >
+                              <svg className="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M12.395 2.553a1 1 0 00-1.45-.385c-.345.23-.614.558-.822.88-.214.33-.403.713-.57 1.116-.334.804-.614 1.768-.84 2.734a31.365 31.365 0 00-.613 3.58 2.64 2.64 0 01-.945-1.067c-.328-.68-.398-1.534-.398-2.654A1 1 0 005.05 6.05 6.981 6.981 0 003 11a7 7 0 1011.95-4.95c-.592-.591-.98-.985-1.348-1.467-.363-.476-.724-1.063-1.207-2.03zM12.12 15.12A3 3 0 017 13s.879.5 2.5.5c0-1 .5-4 1.25-4.5.5 1 .786 1.293 1.371 1.879A2.99 2.99 0 0113 13a2.99 2.99 0 01-.879 2.121z"/>
+                              </svg>
+                              热门
+                            </span>
+                          )}
+                          {/* 推荐标签 */}
+                          {link.recommend && (
+                            <span className="flex-shrink-0 px-1.5 py-0.5 text-[10px] font-medium
+                              bg-gradient-to-r from-blue-500 to-purple-500
+                              text-white rounded-full shadow-sm
+                              flex items-center gap-0.5"
+                            >
+                              <svg
+                                className="w-2.5 h-2.5"
+                                fill="currentColor"
+                                viewBox="0 0 20 20"
+                              >
+                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                              </svg>
+                              {link.recommend}
+                            </span>
+                          )}
+                        </div>
                       )}
 
                       <div className="flex items-start gap-3">
