@@ -60,9 +60,18 @@ export default function Home() {
 
   // 加载搜索历史
   useEffect(() => {
-    const savedHistory = localStorage.getItem('searchHistory')
-    if (savedHistory) {
-      setSearchHistory(JSON.parse(savedHistory))
+    const savedHistoryStr = localStorage.getItem('searchHistory')
+    if (savedHistoryStr) {
+      let savedHistory
+      try {
+        savedHistory = JSON.parse(savedHistoryStr)
+      } catch (e) {
+        savedHistory = []
+        localStorage.removeItem('searchHistory')
+      }
+      if (Array.isArray(savedHistory)) {
+        setSearchHistory(savedHistory)
+      }
     }
   }, [])
 
@@ -70,17 +79,21 @@ export default function Home() {
   const saveSearchHistory = (term: string) => {
     if (!term.trim()) return
 
-    const newHistory = [term, ...searchHistory.filter(h => h !== term)].slice(0, 10)
-    setSearchHistory(newHistory)
-    localStorage.setItem('searchHistory', JSON.stringify(newHistory))
+    setSearchHistory(prev => {
+      const newHistory = [term, ...prev.filter(h => h !== term)].slice(0, 10)
+      localStorage.setItem('searchHistory', JSON.stringify(newHistory))
+      return newHistory
+    })
   }
 
   // 删除单条历史
   const removeHistoryItem = (term: string, e: React.MouseEvent) => {
     e.stopPropagation()
-    const newHistory = searchHistory.filter(h => h !== term)
-    setSearchHistory(newHistory)
-    localStorage.setItem('searchHistory', JSON.stringify(newHistory))
+    setSearchHistory(prev => {
+      const newHistory = prev.filter(h => h !== term)
+      localStorage.setItem('searchHistory', JSON.stringify(newHistory))
+      return newHistory
+    })
   }
 
   // 清空所有历史
