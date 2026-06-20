@@ -129,7 +129,7 @@ export default function DrawerSidebar({
           onClick={() => handleItemClick(item)}
           className={`w-full flex items-center gap-3 px-4 py-3 text-left rounded-lg transition-all duration-200
             ${activeItemId === item.id
-              ? 'bg-blue-50 text-blue-600'
+              ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400'
               : 'theme-text-secondary hover:bg-slate-100 dark:hover:bg-slate-800'
             }`}
           style={{ paddingLeft: `${depth * 12 + 16}px` }}

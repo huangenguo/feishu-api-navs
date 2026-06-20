@@ -33,6 +33,7 @@ function HomeContent() {
   const [showHistory, setShowHistory] = useState(false)
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
   const searchInputRef = useRef<HTMLInputElement>(null)
+  const contentRef = useRef<HTMLDivElement>(null)
   const { recordClick, clickStats } = useClickStats()
 
   const navItems: NavItem[] = [
@@ -54,14 +55,18 @@ function HomeContent() {
     setIsDrawerOpen(false)
   }
 
-  const handleNavItemClick = (item: NavItem) => {
+  const handleNavItemClick = useCallback((item: NavItem) => {
     if (item.id === 'all') {
       setActiveCategory('')
     } else {
       setActiveCategory(item.id)
     }
     setActiveTag('')
-  }
+    // 移动端：关闭抽屉后滚动到内容区域
+    setTimeout(() => {
+      contentRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, 350)
+  }, [contentRef])
 
   const handleLinkClick = (url: string, title: string) => {
     recordClick(url, title)
@@ -254,7 +259,7 @@ function HomeContent() {
               }}
               className={`px-4 py-2.5 rounded-lg text-sm font-medium text-left
                 ${!activeCategory 
-                  ? 'bg-blue-50 text-blue-600' 
+                  ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400' 
                   : 'theme-text-secondary theme-hover-bg'}`}
             >
               全部
@@ -268,7 +273,7 @@ function HomeContent() {
                 }}
                 className={`px-4 py-2.5 rounded-lg text-sm font-medium text-left
                   ${activeCategory === category
-                    ? 'bg-blue-50 text-blue-600'
+                    ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400'
                     : 'theme-text-secondary theme-hover-bg'}`}
               >
                 {category}
@@ -284,9 +289,12 @@ function HomeContent() {
           >
             <IconBackground />
             
+            <div className="absolute top-4 left-4 z-20 lg:hidden">
+              <DrawerToggle onClick={handleDrawerOpen} />
+            </div>
+
             <div className="absolute top-4 right-4 z-20">
               <div className="flex items-center gap-4">
-                <DrawerToggle onClick={handleDrawerOpen} />
                 <div className="p-1">
                   <ThemeSwitch />
                 </div>
@@ -447,7 +455,7 @@ function HomeContent() {
             </div>
           )}
 
-          <div className="mt-6 space-y-8">
+          <div className="mt-6 space-y-8" ref={contentRef}>
             {searchTerm && filteredLinks.length === 0 && (
               <div className="flex flex-col items-center justify-center py-16 theme-bg-secondary rounded-xl">
                 <svg
