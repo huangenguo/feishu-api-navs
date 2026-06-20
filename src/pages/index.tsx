@@ -539,6 +539,7 @@ export default function Home() {
           </div>
         </div>
       </div>
+    </div>
 
       {/* 悬浮导航按钮 */}
       <ScrollNav />
