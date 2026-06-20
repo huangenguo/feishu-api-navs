@@ -26,6 +26,8 @@ export default function Home() {
   const [searchTerm, setSearchTerm] = useState('')
   const [activeCategory, setActiveCategory] = useState<string>('')
   const [activeTag, setActiveTag] = useState<string>('')
+  const [searchHistory, setSearchHistory] = useState<string[]>([])
+  const [showHistory, setShowHistory] = useState(false)
   const { recordClick } = useClickStats()
 
   const handleLinkClick = (url: string, title: string) => {
@@ -56,6 +58,37 @@ export default function Home() {
     fetchLinks()
   }, [])
 
+  // 加载搜索历史
+  useEffect(() => {
+    const savedHistory = localStorage.getItem('searchHistory')
+    if (savedHistory) {
+      setSearchHistory(JSON.parse(savedHistory))
+    }
+  }, [])
+
+  // 保存搜索历史
+  const saveSearchHistory = (term: string) => {
+    if (!term.trim()) return
+
+    const newHistory = [term, ...searchHistory.filter(h => h !== term)].slice(0, 10)
+    setSearchHistory(newHistory)
+    localStorage.setItem('searchHistory', JSON.stringify(newHistory))
+  }
+
+  // 删除单条历史
+  const removeHistoryItem = (term: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    const newHistory = searchHistory.filter(h => h !== term)
+    setSearchHistory(newHistory)
+    localStorage.setItem('searchHistory', JSON.stringify(newHistory))
+  }
+
+  // 清空所有历史
+  const clearAllHistory = () => {
+    setSearchHistory([])
+    localStorage.removeItem('searchHistory')
+  }
+
   // 添加获取随机渐变的函数
   const getRandomGradient = (text: string) => {
     const index = text.charCodeAt(0) % gradientColors.length
@@ -83,7 +116,8 @@ export default function Home() {
 
       const matchesSearch =
         link.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        link.description.toLowerCase().includes(searchTerm.toLowerCase())
+        link.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        link.url.toLowerCase().includes(searchTerm.toLowerCase())
       const matchesCategory = !activeCategory || link.category.includes(activeCategory)
       const matchesTag = !activeTag || link.tags.includes(activeTag)
       return matchesSearch && matchesCategory && matchesTag
@@ -173,7 +207,7 @@ export default function Home() {
         {/* 右侧内容区 */}
         <div className="flex-1 p-6 ml-60">
           {/* 搜索区域 */}
-          <div className="rounded-xl shadow-lg p-8 mb-6 relative overflow-hidden
+          <div className="rounded-xl shadow-lg p-6 mb-6 relative overflow-hidden
             bg-gradient-to-r from-blue-500 to-indigo-600
             dark:from-zinc-900 dark:to-black"
           >
@@ -206,7 +240,7 @@ export default function Home() {
               </div>
             </div>
 
-            <h1 className="text-2xl font-bold text-white text-center mb-6 relative z-10">
+            <h1 className="text-2xl font-bold text-white text-center mb-4 relative z-10">
               创客恩果的飞书导航站
             </h1>
             
@@ -214,14 +248,22 @@ export default function Home() {
               <div className="relative group">
                 <input
                   type="text"
-                  placeholder="搜索导航..."
-                  className="w-full px-6 py-4 pl-14 rounded-full 
+                  placeholder="搜索资源标题、描述或链接..."
+                  className="w-full px-6 py-4 pl-14 rounded-full
                     bg-white/90 backdrop-blur-sm
                     focus:outline-none focus:ring-2 focus:ring-white/20
                     text-lg text-slate-800 placeholder-slate-400
                     shadow-lg shadow-black/5"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
+                  onFocus={() => setShowHistory(true)}
+                  onBlur={() => setTimeout(() => setShowHistory(false), 200)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      saveSearchHistory(searchTerm)
+                      setShowHistory(false)
+                    }
+                  }}
                 />
                 <svg
                   className="absolute left-5 top-4 h-6 w-6 text-slate-400"
@@ -236,6 +278,48 @@ export default function Home() {
                     d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
                   />
                 </svg>
+
+                {/* 搜索历史下拉 */}
+                {showHistory && searchHistory.length > 0 && (
+                  <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden z-50">
+                    <div className="flex items-center justify-between px-4 py-2 border-b border-slate-100">
+                      <span className="text-sm font-medium text-slate-600">搜索历史</span>
+                      <button
+                        onClick={clearAllHistory}
+                        className="text-xs text-slate-400 hover:text-slate-600 transition-colors"
+                      >
+                        清空
+                      </button>
+                    </div>
+                    <div className="max-h-64 overflow-y-auto">
+                      {searchHistory.map((term, index) => (
+                        <div
+                          key={index}
+                          className="flex items-center justify-between px-4 py-2 hover:bg-slate-50 cursor-pointer group"
+                          onClick={() => {
+                            setSearchTerm(term)
+                            setShowHistory(false)
+                          }}
+                        >
+                          <div className="flex items-center gap-2 flex-1 min-w-0">
+                            <svg className="w-4 h-4 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <span className="text-sm text-slate-700 truncate">{term}</span>
+                          </div>
+                          <button
+                            onClick={(e) => removeHistoryItem(term, e)}
+                            className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-slate-600 transition-all p-1"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -277,6 +361,27 @@ export default function Home() {
 
           {/* 内容区域 */}
           <div className="mt-6 space-y-8">
+            {/* 无搜索结果提示 */}
+            {searchTerm && filteredLinks.length === 0 && (
+              <div className="flex flex-col items-center justify-center py-16 theme-bg-secondary rounded-xl">
+                <svg
+                  className="w-16 h-16 text-slate-300 mb-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.5}
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                  />
+                </svg>
+                <p className="text-lg font-medium theme-text-primary mb-2">未找到相关资源</p>
+                <p className="text-sm theme-text-secondary">尝试使用其他关键词搜索</p>
+              </div>
+            )}
+
             {orderedCategories.map(category => (
               <div key={category}>
                 {!activeCategory && (

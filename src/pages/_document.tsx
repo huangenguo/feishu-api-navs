@@ -36,7 +36,7 @@ export default function Document() {
         />
         
         {/* 网站标题 */}
-        <title>iTools - 简洁优雅的导航网站</title>
+        <title>创客恩果的飞书导航站</title>
       </Head>
       <body>
         <Main />
