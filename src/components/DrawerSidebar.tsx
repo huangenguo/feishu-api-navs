@@ -198,7 +198,7 @@ export default function DrawerSidebar({
         <div className="flex flex-col h-full">
           {/* 头部 */}
           <div className="flex items-center justify-between p-4 border-b theme-border-color">
-            <h2 className="text-lg font-semibold theme-text-primary">导航菜单</h2>
+            <h2 className="text-lg font-semibold theme-text-primary">数据表</h2>
             <button
               onClick={onClose}
               className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
