@@ -319,8 +319,8 @@ function HomeContent() {
                 <input
                   ref={searchInputRef}
                   type="text"
-                  placeholder="搜索资源标题、描述或链接... (按 / 聚焦)"
-                  className="w-full px-6 py-4 pl-14 rounded-full
+                  placeholder="搜索资源标题、描述或链接..."
+                  className="w-full px-6 py-4 pl-14 pr-12 rounded-full
                     bg-white/90 backdrop-blur-sm
                     focus:outline-none focus:ring-2 focus:ring-white/20
                     text-lg text-slate-800 placeholder-slate-400
@@ -349,6 +349,9 @@ function HomeContent() {
                     d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
                   />
                 </svg>
+                <div className="absolute right-4 top-1/2 -translate-y-1/2 px-2 py-1 rounded bg-slate-100 text-slate-500 text-sm font-medium">
+                  /
+                </div>
 
                 {showHistory && searchHistory.length > 0 && (
                   <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden z-50">
@@ -604,6 +607,79 @@ function HomeContent() {
       <ClickStats />
 
       <ScrollNav />
+
+      {/* 底部签名档 */}
+      <footer className="mt-12 mb-8 px-6">
+        <div className="max-w-6xl mx-auto rounded-xl p-6
+          bg-gradient-to-r from-slate-800 to-slate-900
+          dark:from-zinc-900 dark:to-black">
+          <div className="flex flex-wrap justify-center gap-6 md:gap-10">
+            {/* B站 */}
+            <a
+              href="https://space.bilibili.com/32828583"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-3 group"
+            >
+              <span className="text-2xl">📺</span>
+              <div>
+                <div className="text-white font-medium text-sm group-hover:text-blue-400 transition-colors">
+                  B站
+                </div>
+                <div className="text-slate-400 text-xs">创客作品视频与教学演示</div>
+              </div>
+            </a>
+
+            {/* 教育技术自留地 */}
+            <a
+              href="https://616161.best/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-3 group"
+            >
+              <span className="text-2xl">📔</span>
+              <div>
+                <div className="text-white font-medium text-sm group-hover:text-blue-400 transition-colors">
+                  教育技术自留地
+                </div>
+                <div className="text-slate-400 text-xs">个人博客</div>
+              </div>
+            </a>
+
+            {/* EdTech 教育技术导航 */}
+            <a
+              href="https://123.616161.best/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-3 group"
+            >
+              <span className="text-2xl">🧭</span>
+              <div>
+                <div className="text-white font-medium text-sm group-hover:text-blue-400 transition-colors">
+                  EdTech 教育技术导航
+                </div>
+                <div className="text-slate-400 text-xs">教育资源聚合导航站</div>
+              </div>
+            </a>
+
+            {/* 潮汕信息网 */}
+            <a
+              href="https://cs.616161.best/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-3 group"
+            >
+              <span className="text-2xl">🌏</span>
+              <div>
+                <div className="text-white font-medium text-sm group-hover:text-blue-400 transition-colors">
+                  潮汕信息网
+                </div>
+                <div className="text-slate-400 text-xs">潮汕地区综合信息服务平台</div>
+              </div>
+            </a>
+          </div>
+        </div>
+      </footer>
     </div>
   )
 }

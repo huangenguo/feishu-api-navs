@@ -159,16 +159,17 @@ export default function DrawerSidebar({
   }
 
   const breakpointClasses = {
-    sm: 'sm:hidden',
-    md: 'md:hidden',
-    lg: 'hidden lg:block',
-    xl: 'hidden xl:block',
+    sm: 'block sm:hidden',
+    md: 'block md:hidden',
+    lg: 'block lg:hidden',
+    xl: 'block xl:hidden',
   }
 
   return (
     <>
+      {/* 遮罩层 */}
       <div
-        className={`fixed inset-0 bg-black/50 backdrop-blur-sm z-40 transition-opacity duration-300
+        className={`fixed inset-0 bg-black/60 backdrop-blur-sm z-40 transition-opacity duration-300
           ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}
           ${breakpointClasses[breakpoint as keyof typeof breakpointClasses]}`}
         onClick={onClose}
@@ -182,6 +183,7 @@ export default function DrawerSidebar({
         }}
       />
 
+      {/* 抽屉侧边栏 */}
       <aside
         className={`fixed top-0 h-full ${width} z-50
           theme-bg-secondary border-r theme-border-color
@@ -194,6 +196,7 @@ export default function DrawerSidebar({
         aria-label="侧边栏导航"
       >
         <div className="flex flex-col h-full">
+          {/* 头部 */}
           <div className="flex items-center justify-between p-4 border-b theme-border-color">
             <h2 className="text-lg font-semibold theme-text-primary">导航菜单</h2>
             <button
@@ -207,12 +210,14 @@ export default function DrawerSidebar({
             </button>
           </div>
 
+          {/* 导航内容 */}
           <nav className="flex-1 overflow-y-auto p-4">
             <ul className="space-y-1">
               {renderNavItems(navItems)}
             </ul>
           </nav>
 
+          {/* 底部提示 */}
           <div className="p-4 border-t theme-border-color">
             <p className="text-xs theme-text-description text-center">
               按 ESC 键关闭侧边栏
@@ -232,7 +237,7 @@ export function DrawerToggle({ onClick, className = '', 'aria-label': ariaLabel 
   return (
     <button
       onClick={onClick}
-      className={`p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors lg:hidden ${className}`}
+      className={`p-2 rounded-lg theme-hover-bg transition-colors lg:hidden ${className}`}
       aria-label={ariaLabel}
       aria-expanded={false}
     >
