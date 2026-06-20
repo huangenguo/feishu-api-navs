@@ -21,6 +21,52 @@ async function getAccessToken() {
     throw error
   }
 }
+// 获取多维表格元数据（包含多维表格名称）
+// https://open.feishu.cn/document/server-docs/docs/bitable-v1/app/get
+async function getAppMeta(token: string) {
+  try {
+    const response = await axios.get(
+      `https://open.feishu.cn/open-apis/bitable/v1/apps/${APP_TOKEN}`,
+      {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    )
+    if (response.data.code !== 0) {
+      throw new Error(`获取多维表格元数据失败: ${response.data.msg}`)
+    }
+    return response.data.data.app
+  } catch (error) {
+    console.error('获取多维表格元数据失败:', error)
+    throw error
+  }
+}
+
+// 获取数据表列表（包含数据表名称）
+// https://open.feishu.cn/document/server-docs/docs/bitable-v1/app-table/list
+async function getTableList(token: string) {
+  try {
+    const response = await axios.get(
+      `https://open.feishu.cn/open-apis/bitable/v1/apps/${APP_TOKEN}/tables`,
+      {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    )
+    if (response.data.code !== 0) {
+      throw new Error(`获取数据表列表失败: ${response.data.msg}`)
+    }
+    return response.data.data.items
+  } catch (error) {
+    console.error('获取数据表列表失败:', error)
+    throw error
+  }
+}
+
 // 列出记录：获取所有记录 旧API  https://open.feishu.cn/document/server-docs/docs/bitable-v1/app-table-record/list
 // const recordsResponse = await axios.get(
 //   `https://open.feishu.cn/open-apis/bitable/v1/apps/${APP_TOKEN}/tables/${TABLE_ID}/records`,
@@ -127,6 +173,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const token = await getAccessToken()
     
+    // 获取多维表格元数据和数据表列表
+    const [appMeta, tables] = await Promise.all([
+      getAppMeta(token),
+      getTableList(token)
+    ])
+    
     // 调用分页函数获取所有记录（替换原有的单页获取逻辑）
     const records = await getAllRecords(token)
     
@@ -215,7 +267,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     res.status(200).json({
       links,
-      categoryOrder
+      categoryOrder,
+      appInfo: {
+        name: appMeta.name,
+        revision: appMeta.revision,
+        timeZone: appMeta.time_zone
+      },
+      tables: tables.map((table: any) => ({
+        tableId: table.table_id,
+        tableName: table.name,
+        revision: table.revision
+      }))
     })
     
   } catch (error: any) {

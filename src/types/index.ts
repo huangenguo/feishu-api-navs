@@ -10,3 +10,15 @@ export interface Link {
   viewOrders: Record<string, number>;  // 不同分类下的排序权重（键为分类名，值为排序号）
   status?: string;        // 可选：状态字段（为空或"启用"时显示，"禁用"时不显示）
 }
+
+export interface AppInfo {
+  name: string;           // 多维表格名称
+  revision: number;       // 版本号
+  timeZone: string;       // 时区
+}
+
+export interface TableInfo {
+  tableId: string;        // 数据表ID
+  tableName: string;      // 数据表名称
+  revision: number;       // 版本号
+}

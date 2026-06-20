@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
+import Head from 'next/head'
 import axios from 'axios'
-import { Link } from '@/types'
+import { Link, AppInfo, TableInfo } from '@/types'
 import Loading from '@/components/Loading'
 import { ThemeSwitch } from '@/components/ThemeSwitch'
 import { IconBackground } from '@/components/IconBackground'
@@ -24,6 +25,8 @@ const HOT_THRESHOLD = 3
 function HomeContent() {
   const [links, setLinks] = useState<Link[]>([])
   const [categoryOrder, setCategoryOrder] = useState<string[]>([])
+  const [appInfo, setAppInfo] = useState<AppInfo | null>(null)
+  const [tables, setTables] = useState<TableInfo[]>([])
   const [error, setError] = useState<string>('')
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
@@ -79,6 +82,8 @@ function HomeContent() {
         const res = await axios.get('/api/links')
         setLinks(res.data.links)
         setCategoryOrder(res.data.categoryOrder)
+        setAppInfo(res.data.appInfo)
+        setTables(res.data.tables || [])
       } catch (err) {
         setError('Failed to fetch links')
         console.error(err)
@@ -236,8 +241,15 @@ function HomeContent() {
     ? [activeCategory]
     : categoryOrder.filter(cat => groupedLinks[cat] && groupedLinks[cat].length > 0)
 
+  const siteName = appInfo?.name || '创客恩果的飞书导航站'
+
   return (
-    <div className="min-h-screen theme-bg">
+    <>
+      <Head>
+        <title>{siteName}</title>
+        <meta property="og:title" content={siteName} />
+      </Head>
+      <div className="min-h-screen theme-bg">
       <DrawerSidebar
         isOpen={isDrawerOpen}
         onClose={handleDrawerClose}
@@ -282,8 +294,8 @@ function HomeContent() {
           </div>
         </aside>
 
-        <div className="flex-1 p-6 lg:ml-60">
-          <div className="rounded-xl shadow-lg p-6 mb-6 relative
+        <div className="flex-1 p-4 sm:p-6 lg:ml-60 min-w-0 overflow-hidden">
+          <div className="rounded-xl shadow-lg p-4 sm:p-6 mb-6 relative
             bg-gradient-to-r from-blue-500 to-indigo-600
             dark:from-zinc-900 dark:to-black"
           >
@@ -294,44 +306,23 @@ function HomeContent() {
             </div>
 
             <div className="absolute top-4 right-4 z-20">
-              <div className="flex items-center gap-4">
-                <div className="p-1">
-                  <ThemeSwitch />
-                </div>
-                <div className="p-1">
-                  <a
-                    href="https://github.com/huangenguo/feishu-api-navs"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-white/80 hover:text-white transition-colors duration-200 block"
-                    title="View on GitHub"
-                  >
-                    <svg
-                      viewBox="0 0 24 24"
-                      className="w-6 h-6"
-                      fill="currentColor"
-                    >
-                      <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" />
-                    </svg>
-                  </a>
-                </div>
-              </div>
+              <ThemeSwitch />
             </div>
 
-            <h1 className="text-2xl font-bold text-white text-center mb-4 relative z-10">
-              创客恩果的飞书导航站
+            <h1 className="text-xl sm:text-2xl font-bold text-white text-center mb-4 relative z-10">
+              {siteName}
             </h1>
-            
+
             <div className="max-w-2xl mx-auto relative z-10">
               <div className="relative group">
                 <input
                   ref={searchInputRef}
                   type="text"
                   placeholder="搜索资源标题、描述或链接..."
-                  className="w-full px-6 py-4 pl-14 pr-12 rounded-full
+                  className="w-full px-4 sm:px-6 py-3 sm:py-4 pl-11 sm:pl-14 pr-10 sm:pr-12 rounded-full
                     bg-white/90 backdrop-blur-sm
                     focus:outline-none focus:ring-2 focus:ring-white/20
-                    text-lg text-slate-800 placeholder-slate-400
+                    text-base sm:text-lg text-slate-800 placeholder-slate-400
                     shadow-lg shadow-black/5"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
@@ -345,7 +336,7 @@ function HomeContent() {
                   }}
                 />
                 <svg
-                  className="absolute left-5 top-4 h-6 w-6 text-slate-400"
+                  className="absolute left-4 sm:left-5 top-3.5 sm:top-4 h-5 w-5 sm:h-6 sm:w-6 text-slate-400"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -357,7 +348,7 @@ function HomeContent() {
                     d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
                   />
                 </svg>
-                <div className="absolute right-4 top-1/2 -translate-y-1/2 px-2 py-1 rounded bg-slate-100 text-slate-500 text-sm font-medium">
+                <div className="absolute right-3 sm:right-4 top-1/2 -translate-y-1/2 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded bg-slate-100 text-slate-500 text-xs sm:text-sm font-medium">
                   /
                 </div>
 
@@ -422,18 +413,18 @@ function HomeContent() {
           </div>
 
           {activeCategory && (
-            <div className="flex items-center gap-6 mb-6">
-              <h2 className="text-xl font-bold theme-text-primary">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6 mb-6">
+              <h2 className="text-lg sm:text-xl font-bold theme-text-primary">
                 {activeCategory}
               </h2>
-              
-              <div className="flex items-center gap-2 overflow-x-auto">
+
+              <div className="flex items-center gap-2 overflow-x-auto scrollbar-none -mx-1 px-1">
                 <button
                   onClick={() => setActiveTag('')}
-                  className={`px-3 py-1 rounded-full text-sm font-medium
+                  className={`px-3 py-1 rounded-full text-sm font-medium whitespace-nowrap
                     transition-colors duration-200
                     ${!activeTag
-                      ? 'bg-blue-100 text-blue-700'
+                      ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
                       : 'theme-text-secondary theme-hover-bg'}`}
                 >
                   全部
@@ -442,10 +433,10 @@ function HomeContent() {
                   <button
                     key={tag}
                     onClick={() => setActiveTag(tag === activeTag ? '' : tag)}
-                    className={`px-3 py-1 rounded-full text-sm font-medium
+                    className={`px-3 py-1 rounded-full text-sm font-medium whitespace-nowrap
                       transition-colors duration-200
                       ${activeTag === tag
-                        ? 'bg-blue-100 text-blue-700'
+                        ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
                         : 'theme-text-secondary theme-hover-bg'}`}
                   >
                     {tag}
@@ -481,7 +472,7 @@ function HomeContent() {
                 {!activeCategory && (
                   <h3 className="text-lg font-medium theme-text-primary mb-4">{category}</h3>
                 )}
-                <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+                <div className="mt-4 grid grid-cols-1 gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
                   {groupedLinks[category]?.map(link => (
                     <a
                       key={link.url}
@@ -555,7 +546,7 @@ function HomeContent() {
                             </span>
                           )}
                         </div>
-                        <div className="flex-1 min-w-0 pr-7">
+                        <div className="flex-1 min-w-0 pr-4 sm:pr-7">
                           <h3 
                             className="font-medium theme-text-primary
                               text-[15px] mb-2 leading-relaxed
@@ -587,10 +578,11 @@ function HomeContent() {
                         </div>
                         
                         <svg 
-                          className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4
+                          className="absolute right-3 sm:right-4 top-1/2 -translate-y-1/2 w-4 h-4
                             text-slate-400 opacity-0 group-hover:opacity-100 
                             -translate-x-2 group-hover:translate-x-0
-                            transition-all duration-300"
+                            transition-all duration-300
+                            hidden sm:block"
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
@@ -616,12 +608,38 @@ function HomeContent() {
 
       <ScrollNav />
 
+      {/* 数据表信息 */}
+      {tables.length > 0 && (
+        <div className="mt-8 px-4 sm:px-6">
+          <div className="max-w-6xl mx-auto rounded-xl p-4 sm:p-6
+            theme-bg-secondary border theme-border-color">
+            <h3 className="text-sm font-semibold theme-text-primary mb-3">
+              📊 数据表信息
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {tables.map(table => (
+                <div
+                  key={table.tableId}
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg
+                    bg-slate-50 dark:bg-slate-800/50"
+                >
+                  <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                      d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                  </svg>
+                  <span className="text-sm theme-text-secondary truncate">{table.tableName}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 底部签名档 */}
-      <footer className="mt-12 mb-8 px-6">
-        <div className="max-w-6xl mx-auto rounded-xl p-6
-          bg-gradient-to-r from-slate-800 to-slate-900
-          dark:from-zinc-900 dark:to-black">
-          <div className="flex flex-wrap justify-center gap-6 md:gap-10">
+      <footer className="mt-12 mb-8 px-4 sm:px-6">
+        <div className="max-w-6xl mx-auto rounded-xl p-4 sm:p-6
+          theme-bg-secondary border theme-border-color">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 sm:gap-6">
             {/* B站 */}
             <a
               href="https://space.bilibili.com/32828583"
@@ -629,12 +647,12 @@ function HomeContent() {
               rel="noopener noreferrer"
               className="flex items-center gap-3 group"
             >
-              <span className="text-2xl">📺</span>
-              <div>
-                <div className="text-white font-medium text-sm group-hover:text-blue-400 transition-colors">
+              <span className="text-xl sm:text-2xl">📺</span>
+              <div className="min-w-0">
+                <div className="theme-text-primary font-medium text-sm group-hover:text-blue-500 transition-colors truncate">
                   B站
                 </div>
-                <div className="text-slate-400 text-xs">创客作品视频与教学演示</div>
+                <div className="theme-text-description text-xs truncate">创客作品视频与教学演示</div>
               </div>
             </a>
 
@@ -645,12 +663,12 @@ function HomeContent() {
               rel="noopener noreferrer"
               className="flex items-center gap-3 group"
             >
-              <span className="text-2xl">📔</span>
-              <div>
-                <div className="text-white font-medium text-sm group-hover:text-blue-400 transition-colors">
+              <span className="text-xl sm:text-2xl">📔</span>
+              <div className="min-w-0">
+                <div className="theme-text-primary font-medium text-sm group-hover:text-blue-500 transition-colors truncate">
                   教育技术自留地
                 </div>
-                <div className="text-slate-400 text-xs">个人博客</div>
+                <div className="theme-text-description text-xs truncate">个人博客</div>
               </div>
             </a>
 
@@ -661,12 +679,12 @@ function HomeContent() {
               rel="noopener noreferrer"
               className="flex items-center gap-3 group"
             >
-              <span className="text-2xl">🧭</span>
-              <div>
-                <div className="text-white font-medium text-sm group-hover:text-blue-400 transition-colors">
-                  EdTech 教育技术导航
+              <span className="text-xl sm:text-2xl">🧭</span>
+              <div className="min-w-0">
+                <div className="theme-text-primary font-medium text-sm group-hover:text-blue-500 transition-colors truncate">
+                  EdTech 导航
                 </div>
-                <div className="text-slate-400 text-xs">教育资源聚合导航站</div>
+                <div className="theme-text-description text-xs truncate">教育资源聚合导航站</div>
               </div>
             </a>
 
@@ -677,18 +695,41 @@ function HomeContent() {
               rel="noopener noreferrer"
               className="flex items-center gap-3 group"
             >
-              <span className="text-2xl">🌏</span>
-              <div>
-                <div className="text-white font-medium text-sm group-hover:text-blue-400 transition-colors">
+              <span className="text-xl sm:text-2xl">🌏</span>
+              <div className="min-w-0">
+                <div className="theme-text-primary font-medium text-sm group-hover:text-blue-500 transition-colors truncate">
                   潮汕信息网
                 </div>
-                <div className="text-slate-400 text-xs">潮汕地区综合信息服务平台</div>
+                <div className="theme-text-description text-xs truncate">潮汕地区综合信息服务平台</div>
+              </div>
+            </a>
+
+            {/* GitHub */}
+            <a
+              href="https://github.com/huangenguo/feishu-api-navs"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-3 group"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                className="w-5 h-5 sm:w-6 sm:h-6 theme-text-secondary group-hover:theme-text-primary transition-colors"
+                fill="currentColor"
+              >
+                <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" />
+              </svg>
+              <div className="min-w-0">
+                <div className="theme-text-primary font-medium text-sm group-hover:text-blue-500 transition-colors truncate">
+                  GitHub
+                </div>
+                <div className="theme-text-description text-xs truncate">开源项目仓库</div>
               </div>
             </a>
           </div>
         </div>
       </footer>
     </div>
+    </>
   )
 }
 
