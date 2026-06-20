@@ -8,7 +8,6 @@ import { ClickStats } from '@/components/ClickStats'
 import { ScrollNav } from '@/components/ScrollNav'
 import { ClickStatsProvider, useClickStats } from '@/context/ClickStatsContext'
 
-// 添加渐变色数组
 const gradientColors = [
   'from-pink-400 to-purple-400',
   'from-blue-400 to-cyan-400',
@@ -18,12 +17,11 @@ const gradientColors = [
   'from-red-400 to-pink-400',
 ]
 
-export default function Home() {
+function HomeContent() {
   const [links, setLinks] = useState<Link[]>([])
   const [categoryOrder, setCategoryOrder] = useState<string[]>([])
   const [error, setError] = useState<string>('')
   const [loading, setLoading] = useState(true)
-  const [loadStartTime, setLoadStartTime] = useState(0)
   const [searchTerm, setSearchTerm] = useState('')
   const [activeCategory, setActiveCategory] = useState<string>('')
   const [activeTag, setActiveTag] = useState<string>('')
@@ -37,7 +35,7 @@ export default function Home() {
 
   useEffect(() => {
     const fetchLinks = async () => {
-      setLoadStartTime(Date.now())
+      const loadStartTime = Date.now()
       try {
         const res = await axios.get('/api/links')
         setLinks(res.data.links)
@@ -46,7 +44,6 @@ export default function Home() {
         setError('Failed to fetch links')
         console.error(err)
       } finally {
-        // 确保加载动画至少显示 500ms，避免太快的闪烁
         const loadTime = Date.now() - loadStartTime
         if (loadTime < 500) {
           setTimeout(() => setLoading(false), 500 - loadTime)
@@ -59,7 +56,6 @@ export default function Home() {
     fetchLinks()
   }, [])
 
-  // 加载搜索历史
   useEffect(() => {
     const savedHistoryStr = localStorage.getItem('searchHistory')
     if (savedHistoryStr) {
@@ -76,7 +72,6 @@ export default function Home() {
     }
   }, [])
 
-  // 保存搜索历史
   const saveSearchHistory = (term: string) => {
     if (!term.trim()) return
 
@@ -87,7 +82,6 @@ export default function Home() {
     })
   }
 
-  // 删除单条历史
   const removeHistoryItem = (term: string, e: React.MouseEvent) => {
     e.stopPropagation()
     setSearchHistory(prev => {
@@ -97,19 +91,16 @@ export default function Home() {
     })
   }
 
-  // 清空所有历史
   const clearAllHistory = () => {
     setSearchHistory([])
     localStorage.removeItem('searchHistory')
   }
 
-  // 添加获取随机渐变的函数
   const getRandomGradient = (text: string) => {
     const index = text.charCodeAt(0) % gradientColors.length
     return gradientColors[index]
   }
 
-  // 获取所有标签
   const getAllTags = (category: string) => {
     return Array.from(new Set(
       links
@@ -118,7 +109,6 @@ export default function Home() {
     )).filter(Boolean)
   }
 
-  // 获取全局所有标签（用于搜索框下方的标签筛选）
   const getGlobalTags = () => {
     return Array.from(new Set(
       links
@@ -130,10 +120,8 @@ export default function Home() {
   if (loading) return <Loading />
   if (error) return <div>Error: {error}</div>
 
-  // 修改过滤逻辑
   const filteredLinks = links
     .filter(link => {
-      // 状态过滤：只显示状态为空或"启用"的链接
       const isStatusValid = !link.status || link.status === '启用'
       if (!isStatusValid) return false
 
@@ -145,11 +133,9 @@ export default function Home() {
       const matchesTag = !activeTag || link.tags.includes(activeTag)
       return matchesSearch && matchesCategory && matchesTag
     })
-    .sort((a, b) => a.order - b.order) // 先对过滤后的链接进行排序
+    .sort((a, b) => a.order - b.order)
 
-  // 修改分组逻辑
   const groupedLinks = filteredLinks.reduce((groups, link) => {
-    // 如果是"全部"分类，按照categoryOrder分组
     if (!activeCategory) {
       link.category.forEach(category => {
         if (!groups[category]) {
@@ -158,7 +144,6 @@ export default function Home() {
         groups[category].push(link)
       })
     } else {
-      // 如果是特定分类，使用现有的排序逻辑
       const cat = activeCategory
       if (!groups[cat]) {
         groups[cat] = []
@@ -170,7 +155,6 @@ export default function Home() {
     return groups
   }, {} as Record<string, Link[]>)
 
-  // 只在特定分类下进行Order排序
   if (activeCategory) {
     Object.keys(groupedLinks).forEach(category => {
       groupedLinks[category].sort((a, b) => {
@@ -182,16 +166,13 @@ export default function Home() {
     })
   }
 
-  // 修改 orderedCategories 的定义，确保只包含有内容的分类
   const orderedCategories = activeCategory 
     ? [activeCategory]
     : categoryOrder.filter(cat => groupedLinks[cat] && groupedLinks[cat].length > 0)
 
   return (
-    <ClickStatsProvider>
-      <div className="min-h-screen theme-bg">
-        <div className="flex min-h-screen">
-        {/* 左侧边栏 */}
+    <div className="min-h-screen theme-bg">
+      <div className="flex min-h-screen">
         <div className="w-60 shrink-0 fixed top-0 left-0 h-screen p-6 theme-bg flex flex-col">
           <div className="theme-bg-secondary rounded-xl shadow-sm border theme-border-color p-3 flex flex-col gap-1 flex-1 overflow-y-auto">
             <button
@@ -224,26 +205,19 @@ export default function Home() {
           </div>
         </div>
 
-        {/* 悬浮统计按钮 */}
-        <ClickStats />
-
-        {/* 右侧内容区 */}
         <div className="flex-1 p-6 ml-60">
-          {/* 搜索区域 */}
           <div className="rounded-xl shadow-lg p-6 mb-6 relative overflow-hidden
             bg-gradient-to-r from-blue-500 to-indigo-600
             dark:from-zinc-900 dark:to-black"
           >
-            {/* 添加图标背景 */}
             <IconBackground />
             
-            {/* 主题切换按钮 */}
             <div className="absolute top-4 right-4 z-20">
               <div className="flex items-center gap-4">
-                <div className="p-1">  {/* 添加内边距增加点击区域 */}
+                <div className="p-1">
                   <ThemeSwitch />
                 </div>
-                <div className="p-1">  {/* 添加内边距增加点击区域 */}
+                <div className="p-1">
                   <a
                     href="https://github.com/huangenguo/feishu-api-navs"
                     target="_blank"
@@ -302,7 +276,6 @@ export default function Home() {
                   />
                 </svg>
 
-                {/* 搜索历史下拉 */}
                 {showHistory && searchHistory.length > 0 && (
                   <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden z-50">
                     <div className="flex items-center justify-between px-4 py-2 border-b border-slate-100">
@@ -346,7 +319,6 @@ export default function Home() {
               </div>
             </div>
 
-            {/* 全局标签筛选 */}
             <div className="max-w-2xl mx-auto mt-4 flex flex-wrap gap-2">
               {getGlobalTags().map(tag => (
                 <button
@@ -364,7 +336,6 @@ export default function Home() {
             </div>
           </div>
 
-          {/* 分类标题和标签 */}
           {activeCategory && (
             <div className="flex items-center gap-6 mb-6">
               <h2 className="text-xl font-bold theme-text-primary">
@@ -399,9 +370,7 @@ export default function Home() {
             </div>
           )}
 
-          {/* 内容区域 */}
           <div className="mt-6 space-y-8">
-            {/* 无搜索结果提示 */}
             {searchTerm && filteredLinks.length === 0 && (
               <div className="flex flex-col items-center justify-center py-16 theme-bg-secondary rounded-xl">
                 <svg
@@ -498,7 +467,6 @@ export default function Home() {
                           >
                             {link.description}
                           </p>
-                          {/* 标签显示 */}
                           {link.tags && link.tags.length > 0 && (
                             <div className="flex flex-wrap gap-1.5 mt-2">
                               {link.tags.map((tag) => (
@@ -539,11 +507,18 @@ export default function Home() {
           </div>
         </div>
       </div>
-    </div>
 
-      {/* 悬浮导航按钮 */}
+      <ClickStats />
+
       <ScrollNav />
+    </div>
+  )
+}
+
+export default function Home() {
+  return (
+    <ClickStatsProvider>
+      <HomeContent />
     </ClickStatsProvider>
   )
 }
- 

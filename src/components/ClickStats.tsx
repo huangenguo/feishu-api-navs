@@ -281,7 +281,7 @@ export function ClickStats() {
       <ClearConfirmModal 
         show={showClearConfirm} 
         onClose={() => setShowClearConfirm(false)} 
-        onConfirm={handleClear} 
+        onConfirm={handleClear}
       />
     </>
   )
