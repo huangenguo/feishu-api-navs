@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback } from 'react'
+import { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import Head from 'next/head'
 import axios from 'axios'
 import { Link, AppInfo, TableInfo } from '@/types'
@@ -27,8 +27,10 @@ function HomeContent() {
   const [categoryOrder, setCategoryOrder] = useState<string[]>([])
   const [appInfo, setAppInfo] = useState<AppInfo | null>(null)
   const [tables, setTables] = useState<TableInfo[]>([])
+  const [activeTableId, setActiveTableId] = useState<string>('')
   const [error, setError] = useState<string>('')
   const [loading, setLoading] = useState(true)
+  const [tableLoading, setTableLoading] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [activeCategory, setActiveCategory] = useState<string>('')
   const [activeTag, setActiveTag] = useState<string>('')
@@ -39,16 +41,15 @@ function HomeContent() {
   const contentRef = useRef<HTMLDivElement>(null)
   const { recordClick, clickStats } = useClickStats()
 
-  const navItems: NavItem[] = [
-    {
-      id: 'all',
-      label: '全部',
-    },
-    ...categoryOrder.map(category => ({
-      id: category,
+  // 构建侧边栏导航项：数据表作为分组，分类作为子项
+  const navItems: NavItem[] = useMemo(() => tables.map(table => ({
+    id: table.tableId,
+    label: table.tableName,
+    children: categoryOrder.map(category => ({
+      id: `${table.tableId}:${category}`,
       label: category,
     })),
-  ]
+  })), [tables, categoryOrder])
 
   const handleDrawerOpen = () => {
     setIsDrawerOpen(true)
@@ -58,32 +59,77 @@ function HomeContent() {
     setIsDrawerOpen(false)
   }
 
-  const handleNavItemClick = useCallback((item: NavItem) => {
-    if (item.id === 'all') {
-      setActiveCategory('')
-    } else {
-      setActiveCategory(item.id)
+  // 获取指定数据表的数据
+  const fetchTableData = useCallback(async (tableId: string) => {
+    setTableLoading(true)
+    setActiveCategory('')
+    setActiveTag('')
+    try {
+      const res = await axios.get(`/api/links?table_id=${tableId}`)
+      setLinks(res.data.links)
+      setCategoryOrder(res.data.categoryOrder)
+    } catch (err) {
+      setError('Failed to fetch table data')
+      console.error(err)
+    } finally {
+      setTableLoading(false)
     }
+  }, [setLinks, setCategoryOrder, setError, setTableLoading, setActiveCategory, setActiveTag])
+
+  const handleNavItemClick = useCallback((item: NavItem) => {
+    // 检查是否是数据表项（没有 children）
+    const isTableItem = tables.some(t => t.tableId === item.id)
+    
+    if (isTableItem) {
+      // 点击数据表：加载该数据表的数据
+      setActiveTableId(item.id)
+      fetchTableData(item.id)
+    } else if (item.id.includes(':')) {
+      // 点击分类：格式为 "tableId:category"
+      const [tableId, category] = item.id.split(':')
+      if (tableId !== activeTableId) {
+        setActiveTableId(tableId)
+        fetchTableData(tableId).then(() => {
+          setActiveCategory(category)
+        })
+      } else {
+        setActiveCategory(category)
+      }
+    }
+    
     setActiveTag('')
     // 移动端：关闭抽屉后滚动到内容区域
     setTimeout(() => {
       contentRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
     }, 350)
-  }, [contentRef])
+  }, [contentRef, activeTableId, tables, fetchTableData])
 
   const handleLinkClick = (url: string, title: string) => {
     recordClick(url, title)
   }
 
   useEffect(() => {
-    const fetchLinks = async () => {
+    const fetchInitialData = async () => {
       const loadStartTime = Date.now()
       try {
+        // 先获取数据表列表和应用信息
         const res = await axios.get('/api/links')
-        setLinks(res.data.links)
-        setCategoryOrder(res.data.categoryOrder)
         setAppInfo(res.data.appInfo)
         setTables(res.data.tables || [])
+        
+        // 默认选中第一个数据表并加载其数据
+        if (res.data.tables && res.data.tables.length > 0) {
+          const firstTableId = res.data.tables[0].tableId
+          setActiveTableId(firstTableId)
+          // 加载第一个数据表的数据
+          const tableRes = await axios.get(`/api/links?table_id=${firstTableId}`)
+          setLinks(tableRes.data.links)
+          setCategoryOrder(tableRes.data.categoryOrder)
+        } else {
+          // 如果没有数据表，使用默认数据
+          setLinks(res.data.links)
+          setCategoryOrder(res.data.categoryOrder)
+        }
       } catch (err) {
         setError('Failed to fetch links')
         console.error(err)
@@ -97,7 +143,7 @@ function HomeContent() {
       }
     }
     
-    fetchLinks()
+    fetchInitialData()
   }, [])
 
   useEffect(() => {
@@ -257,40 +303,57 @@ function HomeContent() {
         placement="left"
         width="w-80"
         navItems={navItems}
-        activeItemId={activeCategory || 'all'}
+        activeItemId={activeCategory ? `${activeTableId}:${activeCategory}` : activeTableId}
         onItemClick={handleNavItemClick}
       />
 
       <div className="flex min-h-screen">
         <aside className="w-60 shrink-0 fixed top-0 left-0 h-screen p-6 theme-bg flex flex-col hidden lg:block">
           <div className="theme-bg-secondary rounded-xl shadow-sm border theme-border-color p-3 flex flex-col gap-1 flex-1 overflow-y-auto">
-            <button
-              onClick={() => {
-                setActiveCategory('')
-                setActiveTag('')
-              }}
-              className={`px-4 py-2.5 rounded-lg text-sm font-medium text-left
-                ${!activeCategory 
-                  ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400' 
-                  : 'theme-text-secondary theme-hover-bg'}`}
-            >
-              全部
-            </button>
-            {categoryOrder.map(category => (
-              <button
-                key={category}
-                onClick={() => {
-                  setActiveCategory(category)
-                  setActiveTag('')
-                }}
-                className={`px-4 py-2.5 rounded-lg text-sm font-medium text-left
-                  ${activeCategory === category
-                    ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400'
-                    : 'theme-text-secondary theme-hover-bg'}`}
-              >
-                {category}
-              </button>
+            {tables.map(table => (
+              <div key={table.tableId}>
+                <button
+                  onClick={() => {
+                    setActiveTableId(table.tableId)
+                    fetchTableData(table.tableId)
+                  }}
+                  className={`w-full px-4 py-2.5 rounded-lg text-sm font-medium text-left flex items-center gap-2
+                    ${activeTableId === table.tableId
+                      ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400'
+                      : 'theme-text-secondary theme-hover-bg'}`}
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                      d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                  </svg>
+                  {table.tableName}
+                </button>
+                {activeTableId === table.tableId && (
+                  <div className="ml-4 mt-1 space-y-1">
+                    {categoryOrder.map(category => (
+                      <button
+                        key={category}
+                        onClick={() => {
+                          setActiveCategory(category)
+                          setActiveTag('')
+                        }}
+                        className={`w-full px-4 py-2 rounded-lg text-xs font-medium text-left
+                          ${activeCategory === category
+                            ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
+                            : 'theme-text-secondary theme-hover-bg'}`}
+                      >
+                        {category}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             ))}
+            {tableLoading && (
+              <div className="flex items-center justify-center py-3">
+                <Loading />
+              </div>
+            )}
           </div>
         </aside>
 
@@ -608,126 +671,6 @@ function HomeContent() {
 
       <ScrollNav />
 
-      {/* 数据表信息 */}
-      {tables.length > 0 && (
-        <div className="mt-8 px-4 sm:px-6">
-          <div className="max-w-6xl mx-auto rounded-xl p-4 sm:p-6
-            theme-bg-secondary border theme-border-color">
-            <h3 className="text-sm font-semibold theme-text-primary mb-3">
-              📊 数据表信息
-            </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {tables.map(table => (
-                <div
-                  key={table.tableId}
-                  className="flex items-center gap-2 px-3 py-2 rounded-lg
-                    bg-slate-50 dark:bg-slate-800/50"
-                >
-                  <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                      d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                  </svg>
-                  <span className="text-sm theme-text-secondary truncate">{table.tableName}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 底部签名档 */}
-      <footer className="mt-12 mb-8 px-4 sm:px-6">
-        <div className="max-w-6xl mx-auto rounded-xl p-4 sm:p-6
-          theme-bg-secondary border theme-border-color">
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 sm:gap-6">
-            {/* B站 */}
-            <a
-              href="https://space.bilibili.com/32828583"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-3 group"
-            >
-              <span className="text-xl sm:text-2xl">📺</span>
-              <div className="min-w-0">
-                <div className="theme-text-primary font-medium text-sm group-hover:text-blue-500 transition-colors truncate">
-                  B站
-                </div>
-                <div className="theme-text-description text-xs truncate">创客作品视频与教学演示</div>
-              </div>
-            </a>
-
-            {/* 教育技术自留地 */}
-            <a
-              href="https://616161.best/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-3 group"
-            >
-              <span className="text-xl sm:text-2xl">📔</span>
-              <div className="min-w-0">
-                <div className="theme-text-primary font-medium text-sm group-hover:text-blue-500 transition-colors truncate">
-                  教育技术自留地
-                </div>
-                <div className="theme-text-description text-xs truncate">个人博客</div>
-              </div>
-            </a>
-
-            {/* EdTech 教育技术导航 */}
-            <a
-              href="https://123.616161.best/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-3 group"
-            >
-              <span className="text-xl sm:text-2xl">🧭</span>
-              <div className="min-w-0">
-                <div className="theme-text-primary font-medium text-sm group-hover:text-blue-500 transition-colors truncate">
-                  EdTech 导航
-                </div>
-                <div className="theme-text-description text-xs truncate">教育资源聚合导航站</div>
-              </div>
-            </a>
-
-            {/* 潮汕信息网 */}
-            <a
-              href="https://cs.616161.best/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-3 group"
-            >
-              <span className="text-xl sm:text-2xl">🌏</span>
-              <div className="min-w-0">
-                <div className="theme-text-primary font-medium text-sm group-hover:text-blue-500 transition-colors truncate">
-                  潮汕信息网
-                </div>
-                <div className="theme-text-description text-xs truncate">潮汕地区综合信息服务平台</div>
-              </div>
-            </a>
-
-            {/* GitHub */}
-            <a
-              href="https://github.com/huangenguo/feishu-api-navs"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-3 group"
-            >
-              <svg
-                viewBox="0 0 24 24"
-                className="w-5 h-5 sm:w-6 sm:h-6 theme-text-secondary group-hover:theme-text-primary transition-colors"
-                fill="currentColor"
-              >
-                <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" />
-              </svg>
-              <div className="min-w-0">
-                <div className="theme-text-primary font-medium text-sm group-hover:text-blue-500 transition-colors truncate">
-                  GitHub
-                </div>
-                <div className="theme-text-description text-xs truncate">开源项目仓库</div>
-              </div>
-            </a>
-          </div>
-        </div>
-      </footer>
     </div>
     </>
   )
