@@ -1,6 +1,7 @@
 User-agent: *
 Allow: /
+Allow: /api/sitemap
 Disallow: /api/
 Disallow: /_next/
 
-Sitemap: https://ai.616161.best/sitemap.xml
+Sitemap: https://ai.616161.best/api/sitemap

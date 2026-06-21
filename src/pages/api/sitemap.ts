@@ -1,6 +1,6 @@
-import { GetServerSideProps } from 'next'
+import { NextApiRequest, NextApiResponse } from 'next'
 
-export const getServerSideProps: GetServerSideProps = async ({ res }) => {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const baseUrl = 'https://ai.616161.best'
   
   try {
@@ -9,14 +9,9 @@ export const getServerSideProps: GetServerSideProps = async ({ res }) => {
       { loc: baseUrl, priority: '1.0', changefreq: 'daily' }
     ]
     
-    // 生成sitemap内容
-    const urls = [
-      ...corePages
-    ]
-    
     const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${urls.map(url => `  <url>
+${corePages.map(url => `  <url>
     <loc>${url.loc}</loc>
     <priority>${url.priority}</priority>
     <changefreq>${url.changefreq}</changefreq>
@@ -25,20 +20,11 @@ ${urls.map(url => `  <url>
 </urlset>`
     
     res.setHeader('Content-Type', 'application/xml')
-    res.setHeader('Cache-Control', 'public, max-age=86400')
-    res.write(xml)
-    res.end()
+    res.setHeader('Cache-Control', 'public, max-age=86400, s-maxage=86400, stale-while-revalidate')
+    res.status(200).send(xml)
   } catch (error) {
     console.error('Failed to generate sitemap:', error)
-    res.statusCode = 500
-    res.setHeader('Content-Type', 'application/xml')
-    res.write(`<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>`)
-    res.end()
+    res.status(500).setHeader('Content-Type', 'application/xml')
+    res.send(`<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>`)
   }
-  
-  return { props: {} }
-}
-
-export default function Sitemap() {
-  return null
 }
