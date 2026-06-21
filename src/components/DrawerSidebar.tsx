@@ -15,7 +15,9 @@ export interface DrawerSidebarProps {
   width?: string
   navItems: NavItem[]
   activeItemId?: string
+  expandedItemIds?: string[]  // 外部控制的展开项ID列表
   onItemClick?: (item: NavItem) => void
+  onExpandedChange?: (expandedIds: string[]) => void  // 展开状态变化回调
   breakpoint?: string
   overlayClassName?: string
   sidebarClassName?: string
@@ -29,18 +31,25 @@ export default function DrawerSidebar({
   width = 'w-80',
   navItems,
   activeItemId,
+  expandedItemIds = [],
   onItemClick,
+  onExpandedChange,
   breakpoint = 'lg',
   overlayClassName = '',
   sidebarClassName = '',
 }: DrawerSidebarProps) {
-  const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set())
+  const [internalExpandedItems, setInternalExpandedItems] = useState<Set<string>>(new Set())
+  
+  // 使用外部展开状态，如果没有则使用内部状态
+  const expandedItems = expandedItemIds.length > 0 
+    ? new Set(expandedItemIds) 
+    : internalExpandedItems
   const touchStartX = useRef<number>(0)
   const touchEndX = useRef<number>(0)
   const isDragging = useRef(false)
 
   const toggleExpand = useCallback((itemId: string) => {
-    setExpandedItems(prev => {
+    const updateState = (prev: Set<string>) => {
       const newSet = new Set(prev)
       if (newSet.has(itemId)) {
         newSet.delete(itemId)
@@ -48,8 +57,22 @@ export default function DrawerSidebar({
         newSet.add(itemId)
       }
       return newSet
-    })
-  }, [])
+    }
+
+    // 更新内部状态
+    if (expandedItemIds.length === 0) {
+      setInternalExpandedItems(updateState)
+    }
+    
+    // 更新外部状态
+    if (onExpandedChange) {
+      // 外部受控模式：直接从最新的 expandedItemIds 创建集合，避免闭包陈旧值问题
+      // 内部状态模式：使用 expandedItems（内部状态通过 setInternalExpandedItems 更新）
+      const currentSet = expandedItemIds.length > 0 ? new Set(expandedItemIds) : expandedItems
+      const newSet = updateState(currentSet)
+      onExpandedChange(Array.from(newSet))
+    }
+  }, [expandedItemIds, expandedItems, onExpandedChange])
 
   const handleItemClick = useCallback((item: NavItem) => {
     if (item.children) {
@@ -241,7 +264,7 @@ export function DrawerToggle({ onClick, className = '', 'aria-label': ariaLabel 
       aria-label={ariaLabel}
       aria-expanded={false}
     >
-      <svg className="w-6 h-6 theme-text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
       </svg>
     </button>

@@ -37,6 +37,8 @@ function HomeContent() {
   const [searchHistory, setSearchHistory] = useState<string[]>([])
   const [showHistory, setShowHistory] = useState(false)
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
+  // 展开的数据表ID列表（统一管理桌面端和移动端的展开状态）
+  const [expandedTableIds, setExpandedTableIds] = useState<string[]>([])
   const searchInputRef = useRef<HTMLInputElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
   const { recordClick, clickStats } = useClickStats()
@@ -81,7 +83,18 @@ function HomeContent() {
     const isTableItem = tables.some(t => t.tableId === item.id)
     
     if (isTableItem) {
-      // 点击数据表：加载该数据表的数据
+      // 点击数据表：切换展开状态
+      setExpandedTableIds(prev => {
+        if (prev.includes(item.id)) {
+          // 已展开，点击后折叠（清除分类）
+          setActiveCategory('')
+          return prev.filter(id => id !== item.id)
+        } else {
+          // 未展开，点击后展开该数据表（同时收起其他数据表）
+          setActiveCategory('')
+          return [item.id]
+        }
+      })
       setActiveTableId(item.id)
       fetchTableData(item.id)
     } else if (item.id.includes(':')) {
@@ -91,6 +104,13 @@ function HomeContent() {
         setActiveTableId(tableId)
         fetchTableData(tableId).then(() => {
           setActiveCategory(category)
+        })
+        // 确保该数据表处于展开状态
+        setExpandedTableIds(prev => {
+          if (!prev.includes(tableId)) {
+            return [...prev.filter(id => tables.some(t => t.tableId === id)), tableId]
+          }
+          return prev
         })
       } else {
         setActiveCategory(category)
@@ -107,6 +127,19 @@ function HomeContent() {
   const handleLinkClick = (url: string, title: string) => {
     recordClick(url, title)
   }
+
+  // 响应式断点优化：从移动端切换到桌面端时自动关闭抽屉
+  useEffect(() => {
+    const handleResize = () => {
+      // lg 及以上屏幕宽度（1024px），自动关闭抽屉
+      if (window.innerWidth >= 1024 && isDrawerOpen) {
+        setIsDrawerOpen(false)
+      }
+    }
+
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [isDrawerOpen])
 
   useEffect(() => {
     const fetchInitialData = async () => {
@@ -304,6 +337,8 @@ function HomeContent() {
         width="w-80"
         navItems={navItems}
         activeItemId={activeCategory ? `${activeTableId}:${activeCategory}` : activeTableId}
+        expandedItemIds={expandedTableIds}
+        onExpandedChange={setExpandedTableIds}
         onItemClick={handleNavItemClick}
       />
 
@@ -314,28 +349,33 @@ function HomeContent() {
               <div key={table.tableId}>
                 <button
                   onClick={() => {
-                    setActiveTableId(table.tableId)
-                    fetchTableData(table.tableId)
+                    const item: NavItem = { id: table.tableId, label: table.tableName }
+                    handleNavItemClick(item)
                   }}
                   className={`w-full px-4 py-2.5 rounded-lg text-sm font-medium text-left flex items-center gap-2
                     ${activeTableId === table.tableId
                       ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400'
                       : 'theme-text-secondary theme-hover-bg'}`}
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4 fill-none stroke-current" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                       d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
                   </svg>
                   {table.tableName}
+                  {/* 展开/折叠指示器 */}
+                  <svg className={`w-4 h-4 ml-auto transition-transform ${expandedTableIds.includes(table.tableId) ? 'rotate-90' : ''}`}
+                    fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
                 </button>
-                {activeTableId === table.tableId && (
+                {expandedTableIds.includes(table.tableId) && (
                   <div className="ml-4 mt-1 space-y-1">
                     {categoryOrder.map(category => (
                       <button
                         key={category}
                         onClick={() => {
-                          setActiveCategory(category)
-                          setActiveTag('')
+                          const item: NavItem = { id: `${table.tableId}:${category}`, label: category }
+                          handleNavItemClick(item)
                         }}
                         className={`w-full px-4 py-2 rounded-lg text-xs font-medium text-left
                           ${activeCategory === category
