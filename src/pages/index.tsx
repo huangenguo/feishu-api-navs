@@ -756,9 +756,9 @@ function HomeContent() {
       {/* Footer */}
       <footer className="text-center py-6 text-sm theme-text-secondary border-t theme-border-color mt-auto">
         <div className="mb-2">
-          <span id="busuanzi_value_site_pv"></span>
+          <span id="busuanzi_container_site_pv">小站被逛 <span id="busuanzi_value_site_pv">Calculating...</span> 次</span>
           <span className="mx-2">·</span>
-          <span id="busuanzi_value_site_uv"></span>
+          <span id="busuanzi_container_site_uv">朋友到访 <span id="busuanzi_value_site_uv">Calculating...</span> 次</span>
         </div>
         <div>
           小站已运行{' '}
