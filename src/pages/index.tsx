@@ -154,6 +154,8 @@ function HomeContent() {
         if (res.data.tables && res.data.tables.length > 0) {
           const firstTableId = res.data.tables[0].tableId
           setActiveTableId(firstTableId)
+          // 默认展开第一个数据表的分类
+          setExpandedTableIds([firstTableId])
           // 加载第一个数据表的数据
           const tableRes = await axios.get(`/api/links?table_id=${firstTableId}`)
           setLinks(tableRes.data.links)
@@ -352,15 +354,11 @@ function HomeContent() {
                     const item: NavItem = { id: table.tableId, label: table.tableName }
                     handleNavItemClick(item)
                   }}
-                  className={`w-full px-4 py-2.5 rounded-lg text-sm font-medium text-left flex items-center gap-2
+                  className={`w-full px-4 py-2.5 rounded-lg text-sm font-medium text-left flex items-center
                     ${activeTableId === table.tableId
                       ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400'
                       : 'theme-text-secondary theme-hover-bg'}`}
                 >
-                  <svg className="w-4 h-4 fill-none stroke-current" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                      d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                  </svg>
                   {table.tableName}
                   {/* 展开/折叠指示器 */}
                   <svg className={`w-4 h-4 ml-auto transition-transform ${expandedTableIds.includes(table.tableId) ? 'rotate-90' : ''}`}
