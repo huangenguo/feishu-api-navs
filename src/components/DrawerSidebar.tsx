@@ -75,14 +75,13 @@ export default function DrawerSidebar({
   }, [expandedItemIds, expandedItems, onExpandedChange])
 
   const handleItemClick = useCallback((item: NavItem) => {
-    if (item.children) {
-      toggleExpand(item.id)
-    }
+    // 展开逻辑由外部 handleNavItemClick 控制，不再调用 toggleExpand
     onItemClick?.(item)
+    // 只有叶子节点（分类项）才关闭抽屉
     if (!item.children) {
       onClose()
     }
-  }, [toggleExpand, onItemClick, onClose])
+  }, [onItemClick, onClose])
 
   useEffect(() => {
     if (isOpen) {
