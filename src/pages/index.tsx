@@ -128,6 +128,50 @@ function HomeContent() {
     recordClick(url, title)
   }
 
+  // 运行时间计时器
+  useEffect(() => {
+    const startDate = new Date('2025-08-05T17:30:00')
+
+    const updateRunTime = () => {
+      const now = new Date()
+      const diff = now.getTime() - startDate.getTime()
+
+      if (diff < 0) return
+
+      const years = Math.floor(diff / (365.25 * 24 * 60 * 60 * 1000))
+      const days = Math.floor((diff % (365.25 * 24 * 60 * 60 * 1000)) / (24 * 60 * 60 * 1000))
+      const hours = Math.floor((diff % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000))
+      const minutes = Math.floor((diff % (60 * 60 * 1000)) / (60 * 1000))
+      const seconds = Math.floor((diff % (60 * 1000)) / 1000)
+
+      const el = document.getElementById('run-years')
+      if (el) el.textContent = String(years)
+      const dEl = document.getElementById('run-days')
+      if (dEl) dEl.textContent = String(days)
+      const hEl = document.getElementById('run-hours')
+      if (hEl) hEl.textContent = String(hours)
+      const mEl = document.getElementById('run-minutes')
+      if (mEl) mEl.textContent = String(minutes)
+      const sEl = document.getElementById('run-seconds')
+      if (sEl) sEl.textContent = String(seconds)
+    }
+
+    updateRunTime()
+    const timer = setInterval(updateRunTime, 1000)
+    return () => clearInterval(timer)
+  }, [])
+
+  // 加载不蒜子统计脚本
+  useEffect(() => {
+    const script = document.createElement('script')
+    script.async = true
+    script.src = '//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js'
+    document.body.appendChild(script)
+    return () => {
+      document.body.removeChild(script)
+    }
+  }, [])
+
   // 响应式断点优化：从移动端切换到桌面端时自动关闭抽屉
   useEffect(() => {
     const handleResize = () => {
@@ -274,7 +318,7 @@ function HomeContent() {
 
   const filteredLinks = links
     .filter(link => {
-      const isStatusValid = !link.status || link.status === '启用'
+      const isStatusValid = link.status === '启用'
       if (!isStatusValid) return false
 
       const matchesSearch =
@@ -708,6 +752,23 @@ function HomeContent() {
       <ClickStats />
 
       <ScrollNav />
+
+      {/* Footer */}
+      <footer className="text-center py-6 text-sm theme-text-secondary border-t theme-border-color mt-auto">
+        <div className="mb-2">
+          <span id="busuanzi_value_site_pv"></span>
+          <span className="mx-2">·</span>
+          <span id="busuanzi_value_site_uv"></span>
+        </div>
+        <div>
+          小站已运行{' '}
+          <span id="run-years">0</span> 年{' '}
+          <span id="run-days">0</span> 天{' '}
+          <span id="run-hours">0</span> 时{' '}
+          <span id="run-minutes">0</span> 分{' '}
+          <span id="run-seconds">0</span> 秒
+        </div>
+      </footer>
 
     </div>
     </>
