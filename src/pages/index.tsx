@@ -11,6 +11,8 @@ import Footer from '@/components/Footer'
 import { ClickStatsProvider, useClickStats } from '@/context/ClickStatsContext'
 import DrawerSidebar, { DrawerToggle, NavItem } from '@/components/DrawerSidebar'
 
+const TABLE_ID = process.env.FEISHU_TABLE_ID || ''
+
 const gradientColors = [
   'from-pink-400 to-purple-400',
   'from-blue-400 to-cyan-400',
@@ -21,6 +23,22 @@ const gradientColors = [
 ]
 
 const HOT_THRESHOLD = 3
+const CACHE_EXPIRE_TIME = 5 * 60 * 1000
+
+interface TableCache {
+  links: Link[];
+  categoryOrder: string[];
+  timestamp: number;
+}
+
+const isCacheValid = (cache: TableCache | undefined): boolean => {
+  if (!cache) return false
+  return Date.now() - cache.timestamp < CACHE_EXPIRE_TIME
+}
+
+const getEnabledLinks = (links: Link[]): Link[] => {
+  return links.filter(link => link.status === '启用')
+}
 
 function HomeContent() {
   const [links, setLinks] = useState<Link[]>([])
@@ -38,9 +56,15 @@ function HomeContent() {
   const [showHistory, setShowHistory] = useState(false)
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
   const [expandedTableIds, setExpandedTableIds] = useState<string[]>([])
+  const [tableCache, setTableCache] = useState<Record<string, TableCache>>({})
+  const tableCacheRef = useRef<Record<string, TableCache>>(tableCache)
   const searchInputRef = useRef<HTMLInputElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
   const { recordClick, clickStats } = useClickStats()
+
+  useEffect(() => {
+    tableCacheRef.current = tableCache
+  }, [tableCache])
 
   const handleDrawerOpen = () => {
     setIsDrawerOpen(true)
@@ -54,8 +78,27 @@ function HomeContent() {
     setTableLoading(true)
     setActiveCategory('')
     setActiveTag('')
+
     try {
+      const cachedData = tableCacheRef.current[tableId]
+      if (isCacheValid(cachedData)) {
+        setLinks(cachedData.links)
+        setCategoryOrder(cachedData.categoryOrder)
+        setTableLoading(false)
+        return
+      }
+
       const res = await axios.get(`/api/links?table_id=${tableId}`)
+      
+      setTableCache(prev => ({
+        ...prev,
+        [tableId]: {
+          links: res.data.links,
+          categoryOrder: res.data.categoryOrder,
+          timestamp: Date.now(),
+        }
+      }))
+      
       setLinks(res.data.links)
       setCategoryOrder(res.data.categoryOrder)
     } catch (err) {
@@ -64,7 +107,7 @@ function HomeContent() {
     } finally {
       setTableLoading(false)
     }
-  }, [setLinks, setCategoryOrder, setError, setTableLoading, setActiveCategory, setActiveTag])
+  }, [setLinks, setCategoryOrder, setError, setTableLoading, setActiveCategory, setActiveTag, setTableCache])
 
   const handleNavItemClick = useCallback((item: NavItem) => {
     const isTableItem = tables.some(t => t.tableId === item.id)
@@ -107,9 +150,28 @@ function HomeContent() {
           const firstTableId = res.data.tables[0].tableId
           setActiveTableId(firstTableId)
           const tableRes = await axios.get(`/api/links?table_id=${firstTableId}`)
+          
+          setTableCache(prev => ({
+            ...prev,
+            [firstTableId]: {
+              links: tableRes.data.links,
+              categoryOrder: tableRes.data.categoryOrder,
+              timestamp: Date.now(),
+            }
+          }))
+          
           setLinks(tableRes.data.links)
           setCategoryOrder(tableRes.data.categoryOrder)
         } else {
+          setTableCache(prev => ({
+            ...prev,
+            [TABLE_ID || 'default']: {
+              links: res.data.links,
+              categoryOrder: res.data.categoryOrder,
+              timestamp: Date.now(),
+            }
+          }))
+          
           setLinks(res.data.links)
           setCategoryOrder(res.data.categoryOrder)
         }
@@ -214,17 +276,22 @@ function HomeContent() {
   }
 
   const getAllTags = (category: string) => {
+    const currentTableCache = tableCache[activeTableId]
+    const sourceLinks = currentTableCache?.links || links
+    const enabledLinks = getEnabledLinks(sourceLinks)
     return Array.from(new Set(
-      links
+      enabledLinks
         .filter(link => !category || link.category.includes(category))
         .flatMap(link => link.tags)
     )).filter(Boolean)
   }
 
   const getGlobalTags = () => {
+    const currentTableCache = tableCache[activeTableId]
+    const sourceLinks = currentTableCache?.links || links
+    const enabledLinks = getEnabledLinks(sourceLinks)
     return Array.from(new Set(
-      links
-        .filter(link => !link.status || link.status === '启用')
+      enabledLinks
         .flatMap(link => link.tags)
     )).filter(Boolean)
   }
@@ -285,14 +352,18 @@ function HomeContent() {
   const siteName = appInfo?.name || '创客恩果的飞书导航站'
 
   // 构建导航项（用于抽屉侧边栏）
-  const navItems: NavItem[] = tables.map(table => ({
-    id: table.tableId,
-    label: table.tableName,
-    children: categoryOrder.map(category => ({
-      id: `${table.tableId}:${category}`,
-      label: category,
-    })),
-  }))
+  const navItems: NavItem[] = tables.map(table => {
+    const cacheData = tableCache[table.tableId]
+    const categories = cacheData?.categoryOrder || []
+    return {
+      id: table.tableId,
+      label: table.tableName,
+      children: categories.map(category => ({
+        id: `${table.tableId}:${category}`,
+        label: category,
+      })),
+    }
+  })
 
   return (
     <>
@@ -320,7 +391,10 @@ function HomeContent() {
             {tables.map(table => {
               const isExpanded = expandedTableIds.includes(table.tableId)
               const isActive = activeTableId === table.tableId
-              const tableLinkCount = table.total || 0
+              const tableCacheData = tableCache[table.tableId]
+              const tableEnabledLinks = tableCacheData ? getEnabledLinks(tableCacheData.links) : []
+              const tableLinkCount = tableEnabledLinks.length || table.total || 0
+              const tableCategories = tableCacheData?.categoryOrder || []
               
               return (
                 <div key={table.tableId} className="mb-1">
@@ -370,14 +444,14 @@ function HomeContent() {
                           ${!activeCategory && isActive
                             ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
                             : 'theme-text-secondary hover:bg-slate-100 dark:hover:bg-slate-800'}
-                          transition-colors`}
+                        transition-colors`}
                       >
                         <span>全部</span>
                         <span className="text-xs opacity-60">({tableLinkCount})</span>
                       </button>
                       
-                      {categoryOrder.map(category => {
-                        const categoryCount = links.filter(l => l.category.includes(category)).length
+                      {tableCategories.map(category => {
+                        const categoryCount = tableEnabledLinks.filter(l => l.category.includes(category)).length || 0
                         return (
                           <button
                             key={category}
@@ -389,7 +463,7 @@ function HomeContent() {
                               ${activeCategory === category && isActive
                                 ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
                                 : 'theme-text-secondary hover:bg-slate-100 dark:hover:bg-slate-800'}
-                              transition-colors`}
+                            transition-colors`}
                           >
                             <span>{category}</span>
                             <span className="text-xs opacity-60">({categoryCount})</span>
@@ -420,7 +494,21 @@ function HomeContent() {
               <DrawerToggle onClick={handleDrawerOpen} />
             </div>
 
-            <div className="absolute top-4 right-4 z-20">
+            <div className="absolute top-4 right-4 z-20 flex items-center gap-2">
+              <button
+                onClick={() => {
+                  setTableCache({})
+                  if (activeTableId) {
+                    fetchTableData(activeTableId)
+                  }
+                }}
+                className="p-2 rounded-lg bg-white/20 hover:bg-white/30 text-white transition-colors"
+                title="刷新数据"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+              </button>
               <ThemeSwitch />
             </div>
 
