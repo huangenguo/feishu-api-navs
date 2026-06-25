@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback, useMemo } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import Head from 'next/head'
 import axios from 'axios'
 import { Link, AppInfo, TableInfo } from '@/types'
@@ -7,6 +7,7 @@ import { ThemeSwitch } from '@/components/ThemeSwitch'
 import { IconBackground } from '@/components/IconBackground'
 import { ClickStats } from '@/components/ClickStats'
 import { ScrollNav } from '@/components/ScrollNav'
+import Footer from '@/components/Footer'
 import { ClickStatsProvider, useClickStats } from '@/context/ClickStatsContext'
 import DrawerSidebar, { DrawerToggle, NavItem } from '@/components/DrawerSidebar'
 
@@ -19,7 +20,6 @@ const gradientColors = [
   'from-red-400 to-pink-400',
 ]
 
-// 热门标签阈值配置
 const HOT_THRESHOLD = 3
 
 function HomeContent() {
@@ -37,21 +37,10 @@ function HomeContent() {
   const [searchHistory, setSearchHistory] = useState<string[]>([])
   const [showHistory, setShowHistory] = useState(false)
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
-  // 展开的数据表ID列表（统一管理桌面端和移动端的展开状态）
   const [expandedTableIds, setExpandedTableIds] = useState<string[]>([])
   const searchInputRef = useRef<HTMLInputElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
   const { recordClick, clickStats } = useClickStats()
-
-  // 构建侧边栏导航项：数据表作为分组，分类作为子项
-  const navItems: NavItem[] = useMemo(() => tables.map(table => ({
-    id: table.tableId,
-    label: table.tableName,
-    children: categoryOrder.map(category => ({
-      id: `${table.tableId}:${category}`,
-      label: category,
-    })),
-  })), [tables, categoryOrder])
 
   const handleDrawerOpen = () => {
     setIsDrawerOpen(true)
@@ -61,7 +50,6 @@ function HomeContent() {
     setIsDrawerOpen(false)
   }
 
-  // 获取指定数据表的数据
   const fetchTableData = useCallback(async (tableId: string) => {
     setTableLoading(true)
     setActiveCategory('')
@@ -79,38 +67,18 @@ function HomeContent() {
   }, [setLinks, setCategoryOrder, setError, setTableLoading, setActiveCategory, setActiveTag])
 
   const handleNavItemClick = useCallback((item: NavItem) => {
-    // 检查是否是数据表项（没有 children）
     const isTableItem = tables.some(t => t.tableId === item.id)
     
     if (isTableItem) {
-      // 点击数据表：切换展开状态
-      setExpandedTableIds(prev => {
-        if (prev.includes(item.id)) {
-          // 已展开，点击后折叠（清除分类）
-          setActiveCategory('')
-          return prev.filter(id => id !== item.id)
-        } else {
-          // 未展开，点击后展开该数据表（同时收起其他数据表）
-          setActiveCategory('')
-          return [item.id]
-        }
-      })
       setActiveTableId(item.id)
       fetchTableData(item.id)
     } else if (item.id.includes(':')) {
-      // 点击分类：格式为 "tableId:category"
       const [tableId, category] = item.id.split(':')
+      if (!tableId || !category) return
       if (tableId !== activeTableId) {
         setActiveTableId(tableId)
         fetchTableData(tableId).then(() => {
           setActiveCategory(category)
-        })
-        // 确保该数据表处于展开状态
-        setExpandedTableIds(prev => {
-          if (!prev.includes(tableId)) {
-            return [...prev.filter(id => tables.some(t => t.tableId === id)), tableId]
-          }
-          return prev
         })
       } else {
         setActiveCategory(category)
@@ -118,7 +86,6 @@ function HomeContent() {
     }
     
     setActiveTag('')
-    // 移动端：关闭抽屉后滚动到内容区域
     setTimeout(() => {
       contentRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
     }, 350)
@@ -128,84 +95,21 @@ function HomeContent() {
     recordClick(url, title)
   }
 
-  // 运行时间计时器
-  useEffect(() => {
-    const startDate = new Date('2025-08-05T17:30:00')
-
-    const updateRunTime = () => {
-      const now = new Date()
-      const diff = now.getTime() - startDate.getTime()
-
-      if (diff < 0) return
-
-      const years = Math.floor(diff / (365.25 * 24 * 60 * 60 * 1000))
-      const days = Math.floor((diff % (365.25 * 24 * 60 * 60 * 1000)) / (24 * 60 * 60 * 1000))
-      const hours = Math.floor((diff % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000))
-      const minutes = Math.floor((diff % (60 * 60 * 1000)) / (60 * 1000))
-      const seconds = Math.floor((diff % (60 * 1000)) / 1000)
-
-      const el = document.getElementById('run-years')
-      if (el) el.textContent = String(years)
-      const dEl = document.getElementById('run-days')
-      if (dEl) dEl.textContent = String(days)
-      const hEl = document.getElementById('run-hours')
-      if (hEl) hEl.textContent = String(hours)
-      const mEl = document.getElementById('run-minutes')
-      if (mEl) mEl.textContent = String(minutes)
-      const sEl = document.getElementById('run-seconds')
-      if (sEl) sEl.textContent = String(seconds)
-    }
-
-    updateRunTime()
-    const timer = setInterval(updateRunTime, 1000)
-    return () => clearInterval(timer)
-  }, [])
-
-  // 加载不蒜子统计脚本
-  useEffect(() => {
-    const script = document.createElement('script')
-    script.async = true
-    script.src = '//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js'
-    document.body.appendChild(script)
-    return () => {
-      document.body.removeChild(script)
-    }
-  }, [])
-
-  // 响应式断点优化：从移动端切换到桌面端时自动关闭抽屉
-  useEffect(() => {
-    const handleResize = () => {
-      // lg 及以上屏幕宽度（1024px），自动关闭抽屉
-      if (window.innerWidth >= 1024 && isDrawerOpen) {
-        setIsDrawerOpen(false)
-      }
-    }
-
-    window.addEventListener('resize', handleResize)
-    return () => window.removeEventListener('resize', handleResize)
-  }, [isDrawerOpen])
-
   useEffect(() => {
     const fetchInitialData = async () => {
       const loadStartTime = Date.now()
       try {
-        // 先获取数据表列表和应用信息
         const res = await axios.get('/api/links')
         setAppInfo(res.data.appInfo)
         setTables(res.data.tables || [])
         
-        // 默认选中第一个数据表并加载其数据
         if (res.data.tables && res.data.tables.length > 0) {
           const firstTableId = res.data.tables[0].tableId
           setActiveTableId(firstTableId)
-          // 默认展开第一个数据表的分类
-          setExpandedTableIds([firstTableId])
-          // 加载第一个数据表的数据
           const tableRes = await axios.get(`/api/links?table_id=${firstTableId}`)
           setLinks(tableRes.data.links)
           setCategoryOrder(tableRes.data.categoryOrder)
         } else {
-          // 如果没有数据表，使用默认数据
           setLinks(res.data.links)
           setCategoryOrder(res.data.categoryOrder)
         }
@@ -224,6 +128,18 @@ function HomeContent() {
     
     fetchInitialData()
   }, [])
+
+  // 响应式处理：从移动端切换到桌面端时自动关闭抽屉
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 1024 && isDrawerOpen) {
+        setIsDrawerOpen(false)
+      }
+    }
+
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [isDrawerOpen])
 
   useEffect(() => {
     const savedHistoryStr = localStorage.getItem('searchHistory')
@@ -368,6 +284,16 @@ function HomeContent() {
 
   const siteName = appInfo?.name || '创客恩果的飞书导航站'
 
+  // 构建导航项（用于抽屉侧边栏）
+  const navItems: NavItem[] = tables.map(table => ({
+    id: table.tableId,
+    label: table.tableName,
+    children: categoryOrder.map(category => ({
+      id: `${table.tableId}:${category}`,
+      label: category,
+    })),
+  }))
+
   return (
     <>
       <Head>
@@ -391,46 +317,90 @@ function HomeContent() {
       <div className="flex min-h-screen">
         <aside className="w-60 shrink-0 fixed top-0 left-0 h-screen p-6 theme-bg flex flex-col hidden lg:block">
           <div className="theme-bg-secondary rounded-xl shadow-sm border theme-border-color p-3 flex flex-col gap-1 flex-1 overflow-y-auto">
-            {tables.map(table => (
-              <div key={table.tableId}>
-                <button
-                  onClick={() => {
-                    const item: NavItem = { id: table.tableId, label: table.tableName }
-                    handleNavItemClick(item)
-                  }}
-                  className={`w-full px-4 py-2.5 rounded-lg text-sm font-medium text-left flex items-center
-                    ${activeTableId === table.tableId
-                      ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400'
-                      : 'theme-text-secondary theme-hover-bg'}`}
-                >
-                  {table.tableName}
-                  {/* 展开/折叠指示器 */}
-                  <svg className={`w-4 h-4 ml-auto transition-transform ${expandedTableIds.includes(table.tableId) ? 'rotate-90' : ''}`}
-                    fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </button>
-                {expandedTableIds.includes(table.tableId) && (
-                  <div className="ml-4 mt-1 space-y-1">
-                    {categoryOrder.map(category => (
-                      <button
-                        key={category}
-                        onClick={() => {
-                          const item: NavItem = { id: `${table.tableId}:${category}`, label: category }
-                          handleNavItemClick(item)
-                        }}
-                        className={`w-full px-4 py-2 rounded-lg text-xs font-medium text-left
-                          ${activeCategory === category
-                            ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
-                            : 'theme-text-secondary theme-hover-bg'}`}
-                      >
-                        {category}
-                      </button>
-                    ))}
+            {tables.map(table => {
+              const isExpanded = expandedTableIds.includes(table.tableId)
+              const isActive = activeTableId === table.tableId
+              const tableLinkCount = table.total || 0
+              
+              return (
+                <div key={table.tableId} className="mb-1">
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => {
+                        setExpandedTableIds(prev => {
+                          if (prev.includes(table.tableId)) {
+                            return prev.filter(id => id !== table.tableId)
+                          }
+                          return [...prev, table.tableId]
+                        })
+                      }}
+                      className="p-1.5 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                      aria-label={isExpanded ? '折叠' : '展开'}
+                    >
+                      <svg className={`w-4 h-4 transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`}
+                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </button>
+                    
+                    <button
+                      onClick={() => {
+                        setActiveTableId(table.tableId)
+                        fetchTableData(table.tableId)
+                      }}
+                      className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium text-left flex items-center justify-between
+                        ${isActive
+                          ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400'
+                          : 'theme-text-secondary hover:bg-slate-100 dark:hover:bg-slate-800'}
+                        transition-colors`}
+                    >
+                      <span>{table.tableName}</span>
+                      <span className="text-xs opacity-60 ml-2">({tableLinkCount})</span>
+                    </button>
                   </div>
-                )}
-              </div>
-            ))}
+                  
+                  {isExpanded && (
+                    <div className="ml-6 mt-1 space-y-1 animate-in slide-in-from-top-2 duration-200">
+                      <button
+                        onClick={() => {
+                          setActiveCategory('')
+                          setActiveTag('')
+                        }}
+                        className={`w-full px-4 py-2 rounded-lg text-xs font-medium text-left flex items-center justify-between
+                          ${!activeCategory && isActive
+                            ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
+                            : 'theme-text-secondary hover:bg-slate-100 dark:hover:bg-slate-800'}
+                          transition-colors`}
+                      >
+                        <span>全部</span>
+                        <span className="text-xs opacity-60">({tableLinkCount})</span>
+                      </button>
+                      
+                      {categoryOrder.map(category => {
+                        const categoryCount = links.filter(l => l.category.includes(category)).length
+                        return (
+                          <button
+                            key={category}
+                            onClick={() => {
+                              setActiveCategory(category)
+                              setActiveTag('')
+                            }}
+                            className={`w-full px-4 py-2 rounded-lg text-xs font-medium text-left flex items-center justify-between
+                              ${activeCategory === category && isActive
+                                ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
+                                : 'theme-text-secondary hover:bg-slate-100 dark:hover:bg-slate-800'}
+                              transition-colors`}
+                          >
+                            <span>{category}</span>
+                            <span className="text-xs opacity-60">({categoryCount})</span>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
             {tableLoading && (
               <div className="flex items-center justify-center py-3">
                 <Loading />
@@ -631,10 +601,8 @@ function HomeContent() {
                         relative"
                       onClick={() => handleLinkClick(link.url, link.title)}
                     >
-                      {/* 标签容器 - 使用 flex 布局排列多个标签 */}
                       {(link.recommend || (clickStats[link.url]?.count || 0) >= HOT_THRESHOLD) && (
                         <div className="absolute top-3 right-3 flex gap-1.5">
-                          {/* 热门标签 */}
                           {(clickStats[link.url]?.count || 0) >= HOT_THRESHOLD && (
                             <span className="flex-shrink-0 px-1.5 py-0.5 text-[10px] font-medium
                               bg-gradient-to-r from-orange-500 to-red-500
@@ -647,7 +615,6 @@ function HomeContent() {
                               热门
                             </span>
                           )}
-                          {/* 推荐标签 */}
                           {link.recommend && (
                             <span className="flex-shrink-0 px-1.5 py-0.5 text-[10px] font-medium
                               bg-gradient-to-r from-blue-500 to-purple-500
@@ -753,22 +720,7 @@ function HomeContent() {
 
       <ScrollNav />
 
-      {/* Footer */}
-      <footer className="text-center py-6 text-sm theme-text-secondary border-t theme-border-color mt-auto">
-        <div className="mb-2">
-          <span id="busuanzi_container_site_pv">小站被逛 <span id="busuanzi_value_site_pv">Calculating...</span> 次</span>
-          <span className="mx-2">·</span>
-          <span id="busuanzi_container_site_uv">朋友到访 <span id="busuanzi_value_site_uv">Calculating...</span> 次</span>
-        </div>
-        <div>
-          小站已运行{' '}
-          <span id="run-years">0</span> 年{' '}
-          <span id="run-days">0</span> 天{' '}
-          <span id="run-hours">0</span> 时{' '}
-          <span id="run-minutes">0</span> 分{' '}
-          <span id="run-seconds">0</span> 秒
-        </div>
-      </footer>
+      <Footer />
 
     </div>
     </>

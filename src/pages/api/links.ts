@@ -269,6 +269,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const allCategories = Array.from(new Set(links.flatMap(link => link.category))).filter(Boolean)
     const categoryOrder = allCategories.length > 0 ? allCategories : viewNames
 
+    // 获取每个表的记录数量
+    const tableCounts = await Promise.all(
+      tables.map(async (table: any) => {
+        try {
+          const response = await axios.post(
+            `https://open.feishu.cn/open-apis/bitable/v1/apps/${APP_TOKEN}/tables/${table.table_id}/records/search`,
+            { page_size: 1 },
+            { headers: { 'Authorization': `Bearer ${token}` } }
+          )
+          return {
+            tableId: table.table_id,
+            total: response.data.data.total || 0
+          }
+        } catch {
+          return { tableId: table.table_id, total: 0 }
+        }
+      })
+    )
+
     res.status(200).json({
       links,
       categoryOrder,
@@ -277,11 +296,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         revision: appMeta.revision,
         timeZone: appMeta.time_zone
       },
-      tables: tables.map((table: any) => ({
-        tableId: table.table_id,
-        tableName: table.name,
-        revision: table.revision
-      }))
+      tables: tables.map((table: any) => {
+        const countInfo = tableCounts.find(c => c.tableId === table.table_id)
+        return {
+          tableId: table.table_id,
+          tableName: table.name,
+          revision: table.revision,
+          total: countInfo?.total || 0
+        }
+      })
     })
     
   } catch (error: any) {

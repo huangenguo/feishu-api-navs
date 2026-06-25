@@ -21,4 +21,5 @@ export interface TableInfo {
   tableId: string;        // 数据表ID
   tableName: string;      // 数据表名称
   revision: number;       // 版本号
+  total?: number;         // 记录总数
 }
