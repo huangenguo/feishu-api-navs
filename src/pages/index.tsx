@@ -116,7 +116,7 @@ function HomeContent() {
     } finally {
       setLoadingTableIds(prev => prev.filter(id => id !== tableId))
     }
-  }, [setLinks, setCategoryOrder, setError, setActiveCategory, setActiveTag, setTableCache])
+  }, [setLinks, setCategoryOrder, setError, setActiveCategory, setActiveTag, setTableCache, setLoadingTableIds])
 
   const handleNavItemClick = useCallback((item: NavItem) => {
     const isTableItem = tables.some(t => t.tableId === item.id)
@@ -553,11 +553,14 @@ function HomeContent() {
                 onClick={async () => {
                   if (isRefreshing) return
                   setIsRefreshing(true)
-                  setTableCache({})
-                  if (activeTableId) {
-                    await fetchTableData(activeTableId)
+                  try {
+                    setTableCache({})
+                    if (activeTableId) {
+                      await fetchTableData(activeTableId)
+                    }
+                  } finally {
+                    setIsRefreshing(false)
                   }
-                  setIsRefreshing(false)
                 }}
                 className="p-2 rounded-lg bg-white/20 hover:bg-white/30 text-white transition-colors disabled:opacity-50"
                 title="刷新数据"
