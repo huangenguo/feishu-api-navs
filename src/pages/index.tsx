@@ -403,7 +403,7 @@ function HomeContent() {
                       onClick={() => {
                         setExpandedTableIds(prev => {
                           const shouldExpand = !prev.includes(table.tableId)
-                          if (shouldExpand && !tableCacheData) {
+                          if (shouldExpand && !isCacheValid(tableCacheData)) {
                             fetchTableData(table.tableId)
                           }
                           return shouldExpand ? [...prev, table.tableId] : prev.filter(id => id !== table.tableId)

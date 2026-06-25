@@ -81,10 +81,9 @@ export function Footer() {
 
   return (
     <footer className="text-center py-6 text-sm theme-text-secondary border-t theme-border-color mt-auto">
-      <div className="mb-2">
-        <span id="busuanzi_container_site_uv">朋友到访 <span id="busuanzi_value_site_uv">{siteUV || '...'}</span> 次</span>
-      </div>
       <div>
+        <span id="busuanzi_container_site_uv">朋友到访 <span id="busuanzi_value_site_uv">{siteUV || '...'}</span> 次</span>
+        <span className="mx-2">.</span>
         小站已运行 <span>{years}</span> 年 <span>{days}</span> 天 <span>{hours}</span> 时 <span>{minutes}</span> 分 <span>{seconds}</span> 秒
       </div>
     </footer>
