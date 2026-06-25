@@ -402,10 +402,11 @@ function HomeContent() {
                     <button
                       onClick={() => {
                         setExpandedTableIds(prev => {
-                          if (prev.includes(table.tableId)) {
-                            return prev.filter(id => id !== table.tableId)
+                          const shouldExpand = !prev.includes(table.tableId)
+                          if (shouldExpand && !tableCacheData) {
+                            fetchTableData(table.tableId)
                           }
-                          return [...prev, table.tableId]
+                          return shouldExpand ? [...prev, table.tableId] : prev.filter(id => id !== table.tableId)
                         })
                       }}
                       className="p-1.5 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
@@ -416,7 +417,7 @@ function HomeContent() {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                       </svg>
                     </button>
-                    
+
                     <button
                       onClick={() => {
                         setActiveTableId(table.tableId)
@@ -432,44 +433,69 @@ function HomeContent() {
                       <span className="text-xs opacity-60 ml-2">({tableLinkCount})</span>
                     </button>
                   </div>
-                  
+
                   {isExpanded && (
                     <div className="ml-6 mt-1 space-y-1 animate-in slide-in-from-top-2 duration-200">
-                      <button
-                        onClick={() => {
-                          setActiveCategory('')
-                          setActiveTag('')
-                        }}
-                        className={`w-full px-4 py-2 rounded-lg text-xs font-medium text-left flex items-center justify-between
-                          ${!activeCategory && isActive
-                            ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
-                            : 'theme-text-secondary hover:bg-slate-100 dark:hover:bg-slate-800'}
-                        transition-colors`}
-                      >
-                        <span>全部</span>
-                        <span className="text-xs opacity-60">({tableLinkCount})</span>
-                      </button>
-                      
-                      {tableCategories.map(category => {
-                        const categoryCount = tableEnabledLinks.filter(l => l.category.includes(category)).length || 0
-                        return (
+                      {!tableCacheData ? (
+                        // 方案三：加载状态指示
+                        <div className="flex items-center justify-center py-4 text-xs text-slate-500">
+                          <svg className="w-3 h-3 animate-spin mr-2" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                          </svg>
+                          加载中...
+                        </div>
+                      ) : (
+                        <>
                           <button
-                            key={category}
                             onClick={() => {
-                              setActiveCategory(category)
+                              // 方案一：点击"全部"时，如果不在当前表则切换表
+                              if (table.tableId !== activeTableId) {
+                                setActiveTableId(table.tableId)
+                                setLinks(tableCacheData.links)
+                                setCategoryOrder(tableCacheData.categoryOrder)
+                              }
+                              setActiveCategory('')
                               setActiveTag('')
                             }}
                             className={`w-full px-4 py-2 rounded-lg text-xs font-medium text-left flex items-center justify-between
-                              ${activeCategory === category && isActive
+                              ${!activeCategory && isActive
                                 ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
                                 : 'theme-text-secondary hover:bg-slate-100 dark:hover:bg-slate-800'}
                             transition-colors`}
                           >
-                            <span>{category}</span>
-                            <span className="text-xs opacity-60">({categoryCount})</span>
+                            <span>全部</span>
+                            <span className="text-xs opacity-60">({tableLinkCount})</span>
                           </button>
-                        )
-                      })}
+
+                          {tableCategories.map(category => {
+                            const categoryCount = tableEnabledLinks.filter(l => l.category.includes(category)).length || 0
+                            return (
+                              <button
+                                key={category}
+                                onClick={() => {
+                                  // 方案一：点击分类时，如果不在当前表则切换表
+                                  if (table.tableId !== activeTableId) {
+                                    setActiveTableId(table.tableId)
+                                    setLinks(tableCacheData.links)
+                                    setCategoryOrder(tableCacheData.categoryOrder)
+                                  }
+                                  setActiveCategory(category)
+                                  setActiveTag('')
+                                }}
+                                className={`w-full px-4 py-2 rounded-lg text-xs font-medium text-left flex items-center justify-between
+                                  ${activeCategory === category && isActive
+                                    ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
+                                    : 'theme-text-secondary hover:bg-slate-100 dark:hover:bg-slate-800'}
+                                transition-colors`}
+                              >
+                                <span>{category}</span>
+                                <span className="text-xs opacity-60">({categoryCount})</span>
+                              </button>
+                            )
+                          })}
+                        </>
+                      )}
                     </div>
                   )}
                 </div>
