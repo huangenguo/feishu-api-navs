@@ -49,6 +49,8 @@ function HomeContent() {
   const [error, setError] = useState<string>('')
   const [loading, setLoading] = useState(true)
   const [tableLoading, setTableLoading] = useState(false)
+  const [loadingTableIds, setLoadingTableIds] = useState<string[]>([])
+  const [isRefreshing, setIsRefreshing] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [activeCategory, setActiveCategory] = useState<string>('')
   const [activeTag, setActiveTag] = useState<string>('')
@@ -58,6 +60,7 @@ function HomeContent() {
   const [expandedTableIds, setExpandedTableIds] = useState<string[]>([])
   const [tableCache, setTableCache] = useState<Record<string, TableCache>>({})
   const tableCacheRef = useRef<Record<string, TableCache>>(tableCache)
+  const loadingTableIdsRef = useRef<string[]>(loadingTableIds)
   const searchInputRef = useRef<HTMLInputElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
   const { recordClick, clickStats } = useClickStats()
@@ -65,6 +68,10 @@ function HomeContent() {
   useEffect(() => {
     tableCacheRef.current = tableCache
   }, [tableCache])
+
+  useEffect(() => {
+    loadingTableIdsRef.current = loadingTableIds
+  }, [loadingTableIds])
 
   const handleDrawerOpen = () => {
     setIsDrawerOpen(true)
@@ -75,7 +82,9 @@ function HomeContent() {
   }
 
   const fetchTableData = useCallback(async (tableId: string) => {
-    setTableLoading(true)
+    if (loadingTableIdsRef.current.includes(tableId)) return
+
+    setLoadingTableIds(prev => [...prev, tableId])
     setActiveCategory('')
     setActiveTag('')
 
@@ -84,7 +93,7 @@ function HomeContent() {
       if (isCacheValid(cachedData)) {
         setLinks(cachedData.links)
         setCategoryOrder(cachedData.categoryOrder)
-        setTableLoading(false)
+        setLoadingTableIds(prev => prev.filter(id => id !== tableId))
         return
       }
 
@@ -105,9 +114,9 @@ function HomeContent() {
       setError('Failed to fetch table data')
       console.error(err)
     } finally {
-      setTableLoading(false)
+      setLoadingTableIds(prev => prev.filter(id => id !== tableId))
     }
-  }, [setLinks, setCategoryOrder, setError, setTableLoading, setActiveCategory, setActiveTag, setTableCache])
+  }, [setLinks, setCategoryOrder, setError, setActiveCategory, setActiveTag, setTableCache])
 
   const handleNavItemClick = useCallback((item: NavItem) => {
     const isTableItem = tables.some(t => t.tableId === item.id)
@@ -386,6 +395,19 @@ function HomeContent() {
       />
 
       <div className="flex min-h-screen">
+        {/* 顶部悬浮加载条 */}
+        {loadingTableIds.length > 0 && (
+          <div className="fixed top-0 left-0 right-0 z-50 h-0.5 bg-transparent overflow-hidden">
+            <div 
+              className="h-full bg-gradient-to-r from-blue-400 via-blue-600 to-blue-400"
+              style={{
+                width: '40%',
+                animation: 'loadingSlide 1.5s ease-in-out infinite',
+              }}
+            />
+          </div>
+        )}
+        
         <aside className="w-60 shrink-0 fixed top-0 left-0 h-screen p-6 theme-bg flex flex-col hidden lg:block">
           <div className="theme-bg-secondary rounded-xl shadow-sm border theme-border-color p-3 flex flex-col gap-1 flex-1 overflow-y-auto">
             {tables.map(table => {
@@ -437,19 +459,26 @@ function HomeContent() {
                   {isExpanded && (
                     <div className="ml-6 mt-1 space-y-1 animate-in slide-in-from-top-2 duration-200">
                       {!tableCacheData ? (
-                        // 方案三：加载状态指示
-                        <div className="flex items-center justify-center py-4 text-xs text-slate-500">
-                          <svg className="w-3 h-3 animate-spin mr-2" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                          </svg>
-                          加载中...
-                        </div>
+                        loadingTableIds.includes(table.tableId) ? (
+                          <div className="flex items-center justify-center py-4 text-xs text-slate-500">
+                            <svg className="w-3 h-3 animate-spin mr-2" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                            </svg>
+                            加载中...
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => fetchTableData(table.tableId)}
+                            className="w-full px-4 py-2 text-xs text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors text-left"
+                          >
+                            点击加载分类
+                          </button>
+                        )
                       ) : (
                         <>
                           <button
                             onClick={() => {
-                              // 方案一：点击"全部"时，如果不在当前表则切换表
                               if (table.tableId !== activeTableId) {
                                 setActiveTableId(table.tableId)
                                 setLinks(tableCacheData.links)
@@ -474,7 +503,6 @@ function HomeContent() {
                               <button
                                 key={category}
                                 onClick={() => {
-                                  // 方案一：点击分类时，如果不在当前表则切换表
                                   if (table.tableId !== activeTableId) {
                                     setActiveTableId(table.tableId)
                                     setLinks(tableCacheData.links)
@@ -522,16 +550,23 @@ function HomeContent() {
 
             <div className="absolute top-4 right-4 z-20 flex items-center gap-2">
               <button
-                onClick={() => {
+                onClick={async () => {
+                  if (isRefreshing) return
+                  setIsRefreshing(true)
                   setTableCache({})
                   if (activeTableId) {
-                    fetchTableData(activeTableId)
+                    await fetchTableData(activeTableId)
                   }
+                  setIsRefreshing(false)
                 }}
-                className="p-2 rounded-lg bg-white/20 hover:bg-white/30 text-white transition-colors"
+                className="p-2 rounded-lg bg-white/20 hover:bg-white/30 text-white transition-colors disabled:opacity-50"
                 title="刷新数据"
+                disabled={isRefreshing}
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg 
+                  className={`w-5 h-5 ${isRefreshing ? 'animate-spin' : ''}`}
+                  fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                >
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                 </svg>
               </button>
@@ -675,7 +710,10 @@ function HomeContent() {
             </div>
           )}
 
-          <div className="mt-6 space-y-8" ref={contentRef}>
+          <div 
+            className={`mt-6 space-y-8 transition-opacity duration-200 ${loadingTableIds.length > 0 ? 'opacity-70' : ''}`} 
+            ref={contentRef}
+          >
             {searchTerm && filteredLinks.length === 0 && (
               <div className="flex flex-col items-center justify-center py-16 theme-bg-secondary rounded-xl">
                 <svg
